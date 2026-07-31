@@ -54,21 +54,27 @@ export function SubscriptionManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
       });
-      const checkoutData = await res.json().catch(() => ({ error: "Error procesando la respuesta del servidor." }));
+      const text = await res.text();
+      let checkoutData: Record<string, unknown> = {};
+      try {
+        checkoutData = JSON.parse(text);
+      } catch {
+        checkoutData = { error: `Error del servidor (${res.status}): ${text.slice(0, 100)}` };
+      }
 
       if (res.ok && checkoutData.initPoint) {
-        window.location.href = checkoutData.initPoint;
+        window.location.href = String(checkoutData.initPoint);
         return;
       }
 
-      if (checkoutData.setupRequired) {
+      if (checkoutData.setupRequired || res.status === 503) {
         // Fallback to WhatsApp if token not configured yet in Vercel
         const message = encodeURIComponent(`Hola TuPedido360, deseo activar el plan de suscripción *${planName}* (${money(price)}) para mi negocio *${data?.businessName || data?.businessSlug || "mi negocio"}* (${data?.businessSlug || "negocio"}.tupedido360.co).`);
         window.open(`https://wa.me/573138866453?text=${message}`, "_blank");
         return;
       }
 
-      setPayError(checkoutData.error || checkoutData.message || "No fue posible iniciar el pago por Mercado Pago.");
+      setPayError(String(checkoutData.error || checkoutData.message || "No fue posible iniciar el pago por Mercado Pago."));
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : "Error de conexión al iniciar el pago.";
       setPayError(errMsg);

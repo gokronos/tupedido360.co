@@ -10,72 +10,76 @@ const PLAN_MAP: Record<string, { months: number; name: string; priceCop: number 
 };
 
 export async function POST(request: Request) {
-  const session = await currentSession();
-  if (!session?.userId) return NextResponse.json({ error: "No autenticado. Por favor inicia sesión nuevamente." }, { status: 401 });
-
-  const body = await request.json().catch(() => null) as { planId?: string } | null;
-  const plan = body?.planId ? PLAN_MAP[body.planId] : null;
-
-  if (!plan) return NextResponse.json({ error: "Plan de suscripción no válido." }, { status: 400 });
-
-  const sql = await ensureSchema();
-  const targetBusinessId = session.businessId ?? null;
-  const targetBusinessSlug = session.businessSlug ?? null;
-
-  const [membership] = await sql`
-    SELECT b.id, b.name, b.slug, u.email
-    FROM business_memberships bm
-    JOIN businesses b ON b.id = bm.business_id
-    JOIN users u ON u.id = bm.user_id
-    WHERE bm.user_id = ${session.userId}
-    ORDER BY (CASE WHEN bm.business_id = ${targetBusinessId} THEN 1 WHEN b.slug = ${targetBusinessSlug} THEN 2 ELSE 3 END) ASC
-    LIMIT 1
-  `;
-
-  if (!membership) return NextResponse.json({ error: "Negocio no encontrado." }, { status: 404 });
-
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-
-  if (!accessToken) {
-    return NextResponse.json({
-      error: "Falta configurar MERCADOPAGO_ACCESS_TOKEN en las variables de entorno.",
-      setupRequired: true,
-    }, { status: 503 });
-  }
-
-  const host = request.headers.get("host") ?? "tupedido360.co";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${host}`;
-
-  const preference = {
-    items: [
-      {
-        id: body!.planId,
-        title: plan.name,
-        description: `Suscripción ${plan.name} para ${membership.name}`,
-        quantity: 1,
-        currency_id: "COP",
-        unit_price: plan.priceCop,
-      },
-    ],
-    payer: {
-      email: membership.email,
-    },
-    external_reference: `${membership.id}:${plan.months}:${Date.now()}`,
-    notification_url: `${baseUrl}/api/webhooks/mercadopago`,
-    back_urls: {
-      success: `${baseUrl}/panel?payment=success`,
-      failure: `${baseUrl}/panel?payment=failure`,
-      pending: `${baseUrl}/panel?payment=pending`,
-    },
-    auto_return: "approved",
-  };
-
   try {
+    const session = await currentSession();
+    if (!session?.userId) {
+      return NextResponse.json({ error: "No autenticado. Por favor inicia sesión nuevamente." }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => null) as { planId?: string } | null;
+    const plan = body?.planId ? PLAN_MAP[body.planId] : null;
+
+    if (!plan) {
+      return NextResponse.json({ error: "Plan de suscripción no válido." }, { status: 400 });
+    }
+
+    const sql = await ensureSchema();
+    const userId = session.userId;
+
+    const [membership] = await sql`
+      SELECT b.id, b.name, b.slug, u.email
+      FROM business_memberships bm
+      JOIN businesses b ON b.id = bm.business_id
+      JOIN users u ON u.id = bm.user_id
+      WHERE bm.user_id = ${userId}
+      LIMIT 1
+    `;
+
+    if (!membership) {
+      return NextResponse.json({ error: "Negocio no encontrado." }, { status: 404 });
+    }
+
+    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
+
+    if (!accessToken) {
+      return NextResponse.json({
+        error: "Falta configurar MERCADOPAGO_ACCESS_TOKEN en las variables de entorno.",
+        setupRequired: true,
+      }, { status: 503 });
+    }
+
+    const host = request.headers.get("host") ?? "tupedido360.co";
+    const protocol = host.includes("localhost") ? "http" : "https";
+    const baseUrl = `${protocol}://${host}`;
+
+    const preference = {
+      items: [
+        {
+          id: body!.planId,
+          title: plan.name,
+          description: `Suscripción ${plan.name} para ${membership.name}`,
+          quantity: 1,
+          currency_id: "COP",
+          unit_price: plan.priceCop,
+        },
+      ],
+      payer: {
+        email: membership.email,
+      },
+      external_reference: `${membership.id}:${plan.months}:${Date.now()}`,
+      notification_url: `${baseUrl}/api/webhooks/mercadopago`,
+      back_urls: {
+        success: `${baseUrl}/panel?payment=success`,
+        failure: `${baseUrl}/panel?payment=failure`,
+        pending: `${baseUrl}/panel?payment=pending`,
+      },
+      auto_return: "approved",
+    };
+
     const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${accessToken.trim()}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(preference),
@@ -98,7 +102,8 @@ export async function POST(request: Request) {
       sandboxInitPoint: data.sandbox_init_point,
     });
   } catch (err: unknown) {
-    const errMsg = err instanceof Error ? err.message : "Error conectando con la pasarela Mercado Pago.";
+    console.error("[Checkout POST Error]", err);
+    const errMsg = err instanceof Error ? err.message : "Error procesando la solicitud de pago.";
     return NextResponse.json({ error: errMsg }, { status: 500 });
   }
 }
