@@ -54,7 +54,7 @@ export function SubscriptionManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
       });
-      const checkoutData = await res.json().catch(() => ({ error: "Error de respuesta del servidor al iniciar el pago." }));
+      const checkoutData = await res.json().catch(() => ({ error: "Error procesando la respuesta del servidor." }));
 
       if (res.ok && checkoutData.initPoint) {
         window.location.href = checkoutData.initPoint;
@@ -68,7 +68,7 @@ export function SubscriptionManager() {
         return;
       }
 
-      setPayError(checkoutData.error ?? "No fue posible iniciar el pago.");
+      setPayError(checkoutData.error || checkoutData.message || "No fue posible iniciar el pago por Mercado Pago.");
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : "Error de conexión al iniciar el pago.";
       setPayError(errMsg);

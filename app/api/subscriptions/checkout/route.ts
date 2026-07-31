@@ -71,24 +71,34 @@ export async function POST(request: Request) {
     auto_return: "approved",
   };
 
-  const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(preference),
-  });
+  try {
+    const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken.trim()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(preference),
+    });
 
-  const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
-  if (!response.ok) {
-    return NextResponse.json({ error: data.message ?? "Error creando preferencia de cobro en Mercado Pago." }, { status: 500 });
+    if (!response.ok) {
+      console.error("[MercadoPago API Error]", response.status, data);
+      const isAuthError = response.status === 401 || response.status === 403 || String(data.message).toLowerCase().includes("token");
+      return NextResponse.json({
+        error: data.message ?? data.error ?? "Mercado Pago no pudo procesar la solicitud. Revisa el Access Token.",
+        setupRequired: isAuthError,
+      }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      initPoint: data.init_point,
+      sandboxInitPoint: data.sandbox_init_point,
+    });
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : "Error conectando con la pasarela Mercado Pago.";
+    return NextResponse.json({ error: errMsg }, { status: 500 });
   }
-
-  return NextResponse.json({
-    ok: true,
-    initPoint: data.init_point,
-    sandboxInitPoint: data.sandbox_init_point,
-  });
 }
