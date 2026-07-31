@@ -92,6 +92,15 @@ CREATE TABLE store_banners (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE business_hours (
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  weekday INTEGER NOT NULL CHECK (weekday BETWEEN 0 AND 6),
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  open_time TIME NOT NULL DEFAULT '08:00',
+  close_time TIME NOT NULL DEFAULT '22:00',
+  PRIMARY KEY (business_id, weekday)
+);
+
 CREATE TABLE media_assets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,

@@ -123,6 +123,15 @@ export async function ensureSchema() {
       )`;
     await sql`CREATE INDEX IF NOT EXISTS store_banners_business_idx ON store_banners(business_id, sort_order)`;
     await sql`
+      CREATE TABLE IF NOT EXISTS business_hours (
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        weekday INTEGER NOT NULL CHECK (weekday BETWEEN 0 AND 6),
+        enabled BOOLEAN NOT NULL DEFAULT true,
+        open_time TIME NOT NULL DEFAULT '08:00',
+        close_time TIME NOT NULL DEFAULT '22:00',
+        PRIMARY KEY (business_id, weekday)
+      )`;
+    await sql`
       CREATE TABLE IF NOT EXISTS media_assets (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
