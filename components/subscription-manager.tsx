@@ -23,6 +23,8 @@ const plans = [
 
 export function SubscriptionManager() {
   const [data, setData] = useState<Subscription | null>(null);
+  const [payingPlan, setPayingPlan] = useState<string | null>(null);
+  const [payError, setPayError] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -41,9 +43,6 @@ export function SubscriptionManager() {
 
   if (!data) return <div className="catalog-loading">Cargando información de suscripción...</div>;
   const active = data.isLifetime || data.status === "active" || data.status === "trialing";
-
-  const [payingPlan, setPayingPlan] = useState<string | null>(null);
-  const [payError, setPayError] = useState("");
 
   async function payPlan(planId: string, planName: string, price: number) {
     setPayError("");
