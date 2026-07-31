@@ -4,6 +4,7 @@ import { Bell, Boxes, ChefHat, ClipboardList, CreditCard, ExternalLink, LayoutDa
 import { useState } from "react";
 import type { AppSession } from "@/lib/session";
 import { ProductManager } from "@/components/product-manager";
+import { OrdersManager } from "@/components/orders-manager";
 
 const navigation = [
   { id: "summary", label: "Resumen", icon: LayoutDashboard },
@@ -26,12 +27,13 @@ export function BusinessDashboard({ session }: { session: AppSession }) {
       </aside>
       <section className="dashboard-main">
         <header className="dashboard-header">
-          <div><p>Panel del negocio</p><h1>{section === "products" ? "Productos" : `Buenos días, ${session.name}`}</h1></div>
+          <div><p>Panel del negocio</p><h1>{section === "products" ? "Productos" : section === "orders" ? "Pedidos" : `Buenos días, ${session.name}`}</h1></div>
           <button className="icon-button" title="Notificaciones" aria-label="Notificaciones"><Bell size={20} /></button>
         </header>
         {section === "summary" && <Summary session={session} onProducts={() => setSection("products")} />}
+        {section === "orders" && <OrdersManager />}
         {section === "products" && <ProductManager />}
-        {!['summary', 'products'].includes(section) && <PendingSection name={navigation.find((item) => item.id === section)?.label ?? "Sección"} />}
+        {!['summary', 'orders', 'products'].includes(section) && <PendingSection name={navigation.find((item) => item.id === section)?.label ?? "Sección"} />}
       </section>
     </main>
   );

@@ -94,10 +94,12 @@ export async function ensureSchema() {
         delivery_address TEXT NOT NULL DEFAULT '',
         notes TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'preparing', 'ready', 'delivered', 'cancelled')),
+        paid BOOLEAN NOT NULL DEFAULT false,
         total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT false`;
     await sql`
       CREATE TABLE IF NOT EXISTS order_items (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
