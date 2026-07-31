@@ -2,6 +2,7 @@
 
 import { Edit3, ImageIcon, PackagePlus, Plus, Search, Trash2, X } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ImageUpload } from "@/components/image-upload";
 
 type Category = { id: string; name: string; active: boolean; sortOrder: number };
 type Product = { id: string; name: string; description: string; priceCop: number; imageUrl: string; active: boolean; categoryId: string | null; categoryName: string | null };
@@ -66,6 +67,7 @@ export function ProductManager() {
 
 function ProductEditor({ product, categories, onClose, onSave }: { product: Product | null; categories: Category[]; onClose: () => void; onSave: (values: Record<string, unknown>) => Promise<void> }) {
   const [saving, setSaving] = useState(false);
+  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true);
     const form = new FormData(event.currentTarget);
@@ -77,7 +79,8 @@ function ProductEditor({ product, categories, onClose, onSave }: { product: Prod
     <label><span>Nombre</span><input name="name" defaultValue={product?.name} required minLength={2} maxLength={100} placeholder="Ej. Hamburguesa especial" /></label>
     <div className="field-row"><label><span>Categoría</span><select name="categoryId" defaultValue={product?.categoryId ?? ""}><option value="">Sin categoría</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label><label><span>Precio</span><input name="priceCop" type="number" min="0" step="100" defaultValue={product?.priceCop} required placeholder="20000" /></label></div>
     <label><span>Descripción</span><textarea name="description" defaultValue={product?.description} maxLength={500} rows={4} placeholder="Ingredientes o detalles importantes" /></label>
-    <label><span>URL de la imagen</span><input name="imageUrl" type="url" defaultValue={product?.imageUrl} placeholder="https://..." /><small>Por ahora puedes pegar un enlace directo a la imagen.</small></label>
+    <input name="imageUrl" type="hidden" value={imageUrl} />
+    <ImageUpload label="Foto del producto" value={imageUrl} onChange={setImageUrl} />
     <footer><button className="secondary-action" type="button" onClick={onClose}>Cancelar</button><button className="primary-compact" disabled={saving} type="submit">{saving ? "Guardando..." : "Guardar producto"}</button></footer>
   </form></div>;
 }

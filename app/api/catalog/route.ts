@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       if (name.length < 2 || name.length > 100 || !Number.isInteger(priceCop) || priceCop < 0) {
         return NextResponse.json({ error: "Revisa el nombre y el precio del producto." }, { status: 400 });
       }
-      if (imageUrl && !/^https?:\/\//i.test(imageUrl)) return NextResponse.json({ error: "La imagen debe usar una dirección http o https." }, { status: 400 });
+      if (imageUrl && !(/^https?:\/\//i.test(imageUrl) || /^\/api\/media\/[0-9a-f-]{36}$/i.test(imageUrl))) return NextResponse.json({ error: "La imagen seleccionada no es válida." }, { status: 400 });
       if (categoryId) {
         const [category] = await sql`SELECT id FROM categories WHERE id = ${categoryId} AND business_id = ${businessId}`;
         if (!category) return NextResponse.json({ error: "La categoría no pertenece a este negocio." }, { status: 400 });

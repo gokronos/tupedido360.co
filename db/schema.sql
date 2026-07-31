@@ -74,6 +74,16 @@ CREATE TABLE products (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE media_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  mime_type TEXT NOT NULL CHECK (mime_type IN ('image/webp', 'image/jpeg', 'image/png')),
+  data BYTEA NOT NULL,
+  size_bytes INTEGER NOT NULL CHECK (size_bytes > 0 AND size_bytes <= 768000),
+  created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
@@ -117,6 +127,7 @@ CREATE INDEX business_members_user_idx ON business_members(user_id);
 CREATE INDEX subscriptions_status_idx ON subscriptions(status);
 CREATE INDEX categories_business_idx ON categories(business_id, sort_order);
 CREATE INDEX products_business_idx ON products(business_id, category_id);
+CREATE INDEX media_assets_business_idx ON media_assets(business_id, created_at DESC);
 CREATE INDEX orders_business_idx ON orders(business_id, created_at DESC);
 CREATE INDEX order_items_order_idx ON order_items(order_id);
 CREATE INDEX restaurant_tables_business_idx ON restaurant_tables(business_id, active);
