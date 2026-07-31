@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
     const [membership] = await sql`
       SELECT b.id, b.name, b.slug, u.email
-      FROM business_memberships bm
+      FROM business_members bm
       JOIN businesses b ON b.id = bm.business_id
       JOIN users u ON u.id = bm.user_id
       WHERE bm.user_id = ${userId}
