@@ -1,7 +1,9 @@
 "use client";
 
-import { ArrowRight, Eye, EyeOff, Store } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 function slugify(value: string) {
   return value
@@ -14,28 +16,34 @@ function slugify(value: string) {
 }
 
 export function RegisterForm() {
+  const router = useRouter();
   const [businessName, setBusinessName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const suggestedSlug = useMemo(() => slugify(businessName), [businessName]);
   const currentSlug = slugEdited ? slugify(slug) : suggestedSlug;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitted(true);
-  }
-
-  if (submitted) {
-    return (
-      <div className="success-state" role="status">
-        <span><Store size={28} /></span>
-        <h3>La base de tu negocio está lista</h3>
-        <p>El registro ya funciona visualmente. Conectaremos la base de datos antes de guardar cuentas reales.</p>
-        <button type="button" onClick={() => setSubmitted(false)}>Volver al formulario</button>
-      </div>
-    );
+    setLoading(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(Object.fromEntries(form.entries())),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      setError(result.error ?? "No fue posible crear el negocio.");
+      setLoading(false);
+      return;
+    }
+    router.push(result.redirectTo ?? "/panel");
+    router.refresh();
   }
 
   return (
@@ -98,12 +106,14 @@ export function RegisterForm() {
         <span>Acepto los términos del servicio y la política de tratamiento de datos.</span>
       </label>
 
-      <button className="primary-action" type="submit">
-        Crear negocio <ArrowRight size={19} />
+      {error && <p className="form-error" role="alert">{error}</p>}
+
+      <button className="primary-action" type="submit" disabled={loading}>
+        {loading ? "Creando negocio..." : "Crear negocio"} <ArrowRight size={19} />
       </button>
 
       <p className="billing-copy">Primer mes sin costo. Después, <strong>$30.000 COP al mes</strong>.</p>
-      <p className="login-copy">¿Ya tienes una cuenta? <a href="/ingresar">Iniciar sesión</a></p>
+      <p className="login-copy">¿Ya tienes una cuenta? <Link href="/ingresar">Iniciar sesión</Link></p>
     </form>
   );
 }

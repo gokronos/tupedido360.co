@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { compare } from "bcryptjs";
+import { ensureSchema } from "@/db/client";
 import { createSessionToken, sessionCookie } from "@/lib/session";
 
 export async function POST(request: Request) {
@@ -6,20 +8,39 @@ export async function POST(request: Request) {
   const expectedEmail = process.env.DEMO_USER_EMAIL?.toLowerCase();
   const expectedPassword = process.env.DEMO_USER_PASSWORD;
 
-  if (!body?.email || !body.password || !expectedEmail || !expectedPassword) {
+  if (!body?.email || !body.password) {
     return NextResponse.json({ error: "No fue posible iniciar sesión." }, { status: 400 });
   }
 
-  if (body.email.trim().toLowerCase() !== expectedEmail || body.password !== expectedPassword) {
-    return NextResponse.json({ error: "Correo o contraseña incorrectos." }, { status: 401 });
+  const email = body.email.trim().toLowerCase();
+  let session;
+
+  if (expectedEmail && expectedPassword && email === expectedEmail && body.password === expectedPassword) {
+    session = { email: expectedEmail, name: "Usuario de prueba", businessName: "Sazón 360 Demo", businessSlug: "sazon-360-demo" };
+  } else if (process.env.DATABASE_URL) {
+    const sql = await ensureSchema();
+    const [account] = await sql`
+      SELECT u.id AS user_id, u.name, u.email, u.password_hash,
+             b.id AS business_id, b.name AS business_name, b.slug AS business_slug
+      FROM users u
+      JOIN business_members bm ON bm.user_id = u.id AND bm.active = true
+      JOIN businesses b ON b.id = bm.business_id
+      WHERE u.email = ${email} AND b.status <> 'cancelled'
+      ORDER BY bm.created_at ASC
+      LIMIT 1`;
+    if (account && await compare(body.password, String(account.password_hash))) {
+      session = {
+        userId: String(account.user_id), businessId: String(account.business_id), email: String(account.email),
+        name: String(account.name), businessName: String(account.business_name), businessSlug: String(account.business_slug),
+      };
+    }
   }
+
+  if (!session) return NextResponse.json({ error: "Correo o contraseña incorrectos." }, { status: 401 });
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set(sessionCookie.name, createSessionToken({
-    email: expectedEmail,
-    name: "Usuario de prueba",
-    businessName: "Sazón 360 Demo",
-    businessSlug: "sazon-360-demo",
+    ...session,
     expiresAt: Date.now() + sessionCookie.options.maxAge * 1000,
   }), sessionCookie.options);
   return response;

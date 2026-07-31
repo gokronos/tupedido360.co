@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 
 const COOKIE_NAME = "tupedido360_session";
 
-type DemoSession = {
+export type AppSession = {
+  userId?: string;
+  businessId?: string;
   email: string;
   name: string;
   businessName: string;
@@ -21,12 +23,12 @@ function signature(payload: string) {
   return createHmac("sha256", secret()).update(payload).digest("base64url");
 }
 
-export function createSessionToken(session: DemoSession) {
+export function createSessionToken(session: AppSession) {
   const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
   return `${payload}.${signature(payload)}`;
 }
 
-export function readSessionToken(token?: string): DemoSession | null {
+export function readSessionToken(token?: string): AppSession | null {
   if (!token) return null;
   const [payload, providedSignature] = token.split(".");
   if (!payload || !providedSignature) return null;
@@ -37,7 +39,7 @@ export function readSessionToken(token?: string): DemoSession | null {
   if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) return null;
 
   try {
-    const session = JSON.parse(Buffer.from(payload, "base64url").toString()) as DemoSession;
+    const session = JSON.parse(Buffer.from(payload, "base64url").toString()) as AppSession;
     return session.expiresAt > Date.now() ? session : null;
   } catch {
     return null;
