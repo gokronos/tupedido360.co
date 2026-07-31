@@ -97,11 +97,15 @@ export async function ensureSchema() {
         name TEXT NOT NULL,
         description TEXT NOT NULL DEFAULT '',
         price_cop INTEGER NOT NULL CHECK (price_cop >= 0),
+        packaging_fee_cop INTEGER NOT NULL DEFAULT 0 CHECK (packaging_fee_cop >= 0),
+        icon TEXT NOT NULL DEFAULT '🍽️',
         image_url TEXT NOT NULL DEFAULT '',
         active BOOLEAN NOT NULL DEFAULT true,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS packaging_fee_cop INTEGER NOT NULL DEFAULT 0 CHECK (packaging_fee_cop >= 0)`;
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT '🍽️'`;
     await sql`
       CREATE TABLE IF NOT EXISTS media_assets (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -127,10 +131,12 @@ export async function ensureSchema() {
         table_id UUID,
         created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
         total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
+        packaging_total_cop INTEGER NOT NULL DEFAULT 0 CHECK (packaging_total_cop >= 0),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT false`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS packaging_total_cop INTEGER NOT NULL DEFAULT 0 CHECK (packaging_total_cop >= 0)`;
     await sql`
       CREATE TABLE IF NOT EXISTS restaurant_tables (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

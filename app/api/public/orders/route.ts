@@ -29,15 +29,17 @@ export async function POST(request: Request) {
   if (!business) return NextResponse.json({ error: "Negocio no disponible." }, { status: 404 });
   const ids = [...quantities.keys()];
   const products = await sql`
-    SELECT id, name, price_cop FROM products
+    SELECT id, name, price_cop, packaging_fee_cop FROM products
     WHERE business_id=${business.id} AND active=true AND id IN ${sql(ids)}`;
   if (products.length !== ids.length) return NextResponse.json({ error: "Uno de los productos ya no está disponible." }, { status: 409 });
-  const totalCop = products.reduce((total, product) => total + Number(product.price_cop) * (quantities.get(String(product.id)) ?? 0), 0);
+  const productsTotalCop = products.reduce((total, product) => total + Number(product.price_cop) * (quantities.get(String(product.id)) ?? 0), 0);
+  const packagingTotalCop = products.reduce((total, product) => total + Number(product.packaging_fee_cop) * (quantities.get(String(product.id)) ?? 0), 0);
+  const totalCop = productsTotalCop + packagingTotalCop;
   const reference = `TP-${randomBytes(4).toString("hex").toUpperCase()}`;
   const order = await sql.begin(async (transaction) => {
     const [created] = await transaction`
-      INSERT INTO orders (business_id, reference, order_type, customer_name, customer_phone, delivery_address, notes, total_cop)
-      VALUES (${business.id}, ${reference}, ${validOrderType}, ${customerName}, ${customerPhone}, ${deliveryAddress}, ${notes}, ${totalCop})
+      INSERT INTO orders (business_id, reference, order_type, customer_name, customer_phone, delivery_address, notes, total_cop, packaging_total_cop)
+      VALUES (${business.id}, ${reference}, ${validOrderType}, ${customerName}, ${customerPhone}, ${deliveryAddress}, ${notes}, ${totalCop}, ${packagingTotalCop})
       RETURNING id, reference`;
     for (const product of products) {
       const quantity = quantities.get(String(product.id)) ?? 0;
@@ -47,5 +49,5 @@ export async function POST(request: Request) {
     }
     return created;
   });
-  return NextResponse.json({ ok: true, reference: order.reference, totalCop }, { status: 201 });
+  return NextResponse.json({ ok: true, reference: order.reference, totalCop, packagingTotalCop }, { status: 201 });
 }

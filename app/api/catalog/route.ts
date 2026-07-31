@@ -19,7 +19,8 @@ export async function GET() {
     FROM categories WHERE business_id = ${businessId}
     ORDER BY sort_order, name`;
   const products = await sql`
-    SELECT p.id, p.name, p.description, p.price_cop AS "priceCop", p.image_url AS "imageUrl",
+    SELECT p.id, p.name, p.description, p.price_cop AS "priceCop", p.packaging_fee_cop AS "packagingFeeCop",
+           p.icon, p.image_url AS "imageUrl",
            p.active, p.category_id AS "categoryId", c.name AS "categoryName"
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id AND c.business_id = ${businessId}
@@ -54,7 +55,9 @@ export async function POST(request: Request) {
       const categoryId = typeof body.categoryId === "string" && body.categoryId ? body.categoryId : null;
       const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim().slice(0, 1000) : "";
       const priceCop = Number(body.priceCop);
-      if (name.length < 2 || name.length > 100 || !Number.isInteger(priceCop) || priceCop < 0) {
+      const packagingFeeCop = Number(body.packagingFeeCop ?? 0);
+      const icon = typeof body.icon === "string" ? body.icon.trim().slice(0, 12) : "🍽️";
+      if (name.length < 2 || name.length > 100 || !Number.isInteger(priceCop) || priceCop < 0 || !Number.isInteger(packagingFeeCop) || packagingFeeCop < 0 || !icon) {
         return NextResponse.json({ error: "Revisa el nombre y el precio del producto." }, { status: 400 });
       }
       if (imageUrl && !(/^https?:\/\//i.test(imageUrl) || /^\/api\/media\/[0-9a-f-]{36}$/i.test(imageUrl))) return NextResponse.json({ error: "La imagen seleccionada no es válida." }, { status: 400 });
@@ -65,13 +68,13 @@ export async function POST(request: Request) {
 
       const [product] = id
         ? await sql`
-            UPDATE products SET name=${name}, description=${description}, price_cop=${priceCop},
-              image_url=${imageUrl}, category_id=${categoryId}, updated_at=now()
+            UPDATE products SET name=${name}, description=${description}, price_cop=${priceCop}, packaging_fee_cop=${packagingFeeCop},
+              icon=${icon}, image_url=${imageUrl}, category_id=${categoryId}, updated_at=now()
             WHERE id=${id} AND business_id=${businessId}
             RETURNING id`
         : await sql`
-            INSERT INTO products (business_id, category_id, name, description, price_cop, image_url)
-            VALUES (${businessId}, ${categoryId}, ${name}, ${description}, ${priceCop}, ${imageUrl})
+            INSERT INTO products (business_id, category_id, name, description, price_cop, packaging_fee_cop, icon, image_url)
+            VALUES (${businessId}, ${categoryId}, ${name}, ${description}, ${priceCop}, ${packagingFeeCop}, ${icon}, ${imageUrl})
             RETURNING id`;
       if (!product) return NextResponse.json({ error: "Producto no encontrado." }, { status: 404 });
       return NextResponse.json({ ok: true, id: product.id }, { status: id ? 200 : 201 });

@@ -16,7 +16,7 @@ export async function GET() {
   const orders = await auth.sql`
     SELECT o.id, o.reference, o.order_type AS "orderType", o.customer_name AS "customerName",
       o.customer_phone AS "customerPhone", o.delivery_address AS "deliveryAddress", o.notes,
-      o.status, o.paid, o.total_cop AS "totalCop", o.created_at AS "createdAt",
+      o.status, o.paid, o.total_cop AS "totalCop", o.packaging_total_cop AS "packagingTotalCop", o.created_at AS "createdAt",
       t.name AS "tableName", u.name AS "createdByName"
     FROM orders o
     LEFT JOIN restaurant_tables t ON t.id=o.table_id
