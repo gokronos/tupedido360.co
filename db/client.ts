@@ -83,10 +83,37 @@ export async function ensureSchema() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS orders (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        reference TEXT NOT NULL UNIQUE,
+        order_type TEXT NOT NULL CHECK (order_type IN ('delivery', 'pickup')),
+        customer_name TEXT NOT NULL,
+        customer_phone TEXT NOT NULL,
+        delivery_address TEXT NOT NULL DEFAULT '',
+        notes TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'preparing', 'ready', 'delivered', 'cancelled')),
+        total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS order_items (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+        product_name TEXT NOT NULL,
+        unit_price_cop INTEGER NOT NULL CHECK (unit_price_cop >= 0),
+        quantity INTEGER NOT NULL CHECK (quantity > 0),
+        subtotal_cop INTEGER NOT NULL CHECK (subtotal_cop >= 0)
+      )`;
     await sql`CREATE INDEX IF NOT EXISTS business_members_user_idx ON business_members(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS subscriptions_status_idx ON subscriptions(status)`;
     await sql`CREATE INDEX IF NOT EXISTS categories_business_idx ON categories(business_id, sort_order)`;
     await sql`CREATE INDEX IF NOT EXISTS products_business_idx ON products(business_id, category_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS orders_business_idx ON orders(business_id, created_at DESC)`;
+    await sql`CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id)`;
   })();
 
   try {
