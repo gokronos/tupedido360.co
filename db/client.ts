@@ -88,18 +88,38 @@ export async function ensureSchema() {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
         reference TEXT NOT NULL UNIQUE,
-        order_type TEXT NOT NULL CHECK (order_type IN ('delivery', 'pickup')),
+        order_type TEXT NOT NULL CHECK (order_type IN ('delivery', 'pickup', 'dine_in')),
         customer_name TEXT NOT NULL,
         customer_phone TEXT NOT NULL,
         delivery_address TEXT NOT NULL DEFAULT '',
         notes TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'preparing', 'ready', 'delivered', 'cancelled')),
         paid BOOLEAN NOT NULL DEFAULT false,
+        table_id UUID,
+        created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
         total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT false`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS restaurant_tables (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (business_id, name)
+      )`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS table_id UUID REFERENCES restaurant_tables(id) ON DELETE SET NULL`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL`;
+    await sql`ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_order_type_check`;
+    await sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='orders_order_type_v2_check') THEN
+          ALTER TABLE orders ADD CONSTRAINT orders_order_type_v2_check CHECK (order_type IN ('delivery', 'pickup', 'dine_in'));
+        END IF;
+      END $$`;
     await sql`
       CREATE TABLE IF NOT EXISTS order_items (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -116,6 +136,7 @@ export async function ensureSchema() {
     await sql`CREATE INDEX IF NOT EXISTS products_business_idx ON products(business_id, category_id)`;
     await sql`CREATE INDEX IF NOT EXISTS orders_business_idx ON orders(business_id, created_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS restaurant_tables_business_idx ON restaurant_tables(business_id, active)`;
   })();
 
   try {

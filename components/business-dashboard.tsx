@@ -5,6 +5,9 @@ import { useState } from "react";
 import type { AppSession } from "@/lib/session";
 import { ProductManager } from "@/components/product-manager";
 import { OrdersManager } from "@/components/orders-manager";
+import { TeamManager } from "@/components/team-manager";
+import { TablesManager } from "@/components/tables-manager";
+import { WaiterDashboard } from "@/components/waiter-dashboard";
 
 const navigation = [
   { id: "summary", label: "Resumen", icon: LayoutDashboard },
@@ -17,6 +20,7 @@ const navigation = [
 
 export function BusinessDashboard({ session }: { session: AppSession }) {
   const [section, setSection] = useState("summary");
+  if (session.role === "waiter") return <WaiterDashboard session={session} />;
 
   return (
     <main className="dashboard-shell">
@@ -27,13 +31,15 @@ export function BusinessDashboard({ session }: { session: AppSession }) {
       </aside>
       <section className="dashboard-main">
         <header className="dashboard-header">
-          <div><p>Panel del negocio</p><h1>{section === "products" ? "Productos" : section === "orders" ? "Pedidos" : `Buenos días, ${session.name}`}</h1></div>
+          <div><p>{session.role === "owner" ? "Panel del dueño" : "Panel del administrador"}</p><h1>{section === "products" ? "Productos" : section === "orders" ? "Pedidos" : section === "tables" ? "Mesas" : section === "team" ? "Equipo" : `Buenos días, ${session.name}`}</h1></div>
           <button className="icon-button" title="Notificaciones" aria-label="Notificaciones"><Bell size={20} /></button>
         </header>
         {section === "summary" && <Summary session={session} onProducts={() => setSection("products")} />}
         {section === "orders" && <OrdersManager />}
         {section === "products" && <ProductManager />}
-        {!['summary', 'orders', 'products'].includes(section) && <PendingSection name={navigation.find((item) => item.id === section)?.label ?? "Sección"} />}
+        {section === "tables" && <TablesManager />}
+        {section === "team" && <TeamManager />}
+        {!['summary', 'orders', 'products', 'tables', 'team'].includes(section) && <PendingSection name={navigation.find((item) => item.id === section)?.label ?? "Sección"} />}
       </section>
     </main>
   );

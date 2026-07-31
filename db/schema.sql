@@ -71,17 +71,30 @@ CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
   reference TEXT NOT NULL UNIQUE,
-  order_type TEXT NOT NULL CHECK (order_type IN ('delivery', 'pickup')),
+  order_type TEXT NOT NULL CHECK (order_type IN ('delivery', 'pickup', 'dine_in')),
   customer_name TEXT NOT NULL,
   customer_phone TEXT NOT NULL,
   delivery_address TEXT NOT NULL DEFAULT '',
   notes TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'preparing', 'ready', 'delivered', 'cancelled')),
   paid BOOLEAN NOT NULL DEFAULT false,
+  table_id UUID,
+  created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE TABLE restaurant_tables (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (business_id, name)
+);
+
+ALTER TABLE orders ADD CONSTRAINT orders_table_fk FOREIGN KEY (table_id) REFERENCES restaurant_tables(id) ON DELETE SET NULL;
 
 CREATE TABLE order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -99,3 +112,4 @@ CREATE INDEX categories_business_idx ON categories(business_id, sort_order);
 CREATE INDEX products_business_idx ON products(business_id, category_id);
 CREATE INDEX orders_business_idx ON orders(business_id, created_at DESC);
 CREATE INDEX order_items_order_idx ON order_items(order_id);
+CREATE INDEX restaurant_tables_business_idx ON restaurant_tables(business_id, active);

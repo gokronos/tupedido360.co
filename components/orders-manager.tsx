@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 type OrderStatus = "received" | "preparing" | "ready" | "delivered" | "cancelled";
 type OrderItem = { productName: string; unitPriceCop: number; quantity: number; subtotalCop: number };
-type Order = { id: string; reference: string; orderType: "delivery" | "pickup"; customerName: string; customerPhone: string; deliveryAddress: string; notes: string; status: OrderStatus; paid: boolean; totalCop: number; createdAt: string; items: OrderItem[] };
+type Order = { id: string; reference: string; orderType: "delivery" | "pickup" | "dine_in"; customerName: string; customerPhone: string; deliveryAddress: string; notes: string; status: OrderStatus; paid: boolean; totalCop: number; createdAt: string; tableName?: string; createdByName?: string; items: OrderItem[] };
 const money = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
 const statusInfo: Record<OrderStatus, { label: string; icon: typeof Clock3 }> = {
   received: { label: "Recibido", icon: Clock3 }, preparing: { label: "Preparando", icon: UtensilsCrossed }, ready: { label: "Listo", icon: PackageCheck }, delivered: { label: "Entregado", icon: CheckCircle2 }, cancelled: { label: "Cancelado", icon: Clock3 },
@@ -61,7 +61,7 @@ function OrderCard({ order, busy, onAction }: { order: Order; busy: boolean; onA
   const next: Partial<Record<OrderStatus, OrderStatus>> = { received: "preparing", preparing: "ready", ready: "delivered" };
   return <article className={`order-card status-${order.status}`}>
     <header><div><span className="order-reference">{order.reference}</span><span className={`order-status ${order.status}`}><StatusIcon size={14} />{statusInfo[order.status].label}</span></div><time>{new Date(order.createdAt).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</time></header>
-    <div className="order-customer"><strong>{order.customerName}</strong><a href={`tel:${order.customerPhone}`}><Phone size={14} />{order.customerPhone}</a><span>{order.orderType === "delivery" ? <><Truck size={15} />Domicilio</> : <><ShoppingBag size={15} />Para llevar</>}</span>{order.deliveryAddress && <address><MapPin size={14} />{order.deliveryAddress}</address>}</div>
+    <div className="order-customer"><strong>{order.tableName ?? order.customerName}</strong>{order.customerPhone && <a href={`tel:${order.customerPhone}`}><Phone size={14} />{order.customerPhone}</a>}<span>{order.orderType === "delivery" ? <><Truck size={15} />Domicilio</> : order.orderType === "dine_in" ? <><UtensilsCrossed size={15} />Mesa · {order.createdByName ?? "Mesero"}</> : <><ShoppingBag size={15} />Para llevar</>}</span>{order.deliveryAddress && <address><MapPin size={14} />{order.deliveryAddress}</address>}</div>
     <div className="order-lines">{order.items.map((item, index) => <div key={`${item.productName}-${index}`}><span><b>{item.quantity}x</b>{item.productName}</span><strong>{money(item.subtotalCop)}</strong></div>)}</div>
     {order.notes && <p className="order-notes">Nota: {order.notes}</p>}
     <div className="order-total"><span>Total</span><strong>{money(order.totalCop)}</strong></div>

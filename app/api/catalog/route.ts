@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 async function context() {
   const session = await currentSession();
   if (!session?.businessId) return null;
-  return { businessId: session.businessId, sql: await ensureSchema() };
+  return { businessId: session.businessId, role: session.role, sql: await ensureSchema() };
 }
 
 export async function GET() {
@@ -33,6 +33,7 @@ export async function POST(request: Request) {
   if (!auth) return NextResponse.json({ error: "Sesión no autorizada." }, { status: 401 });
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   if (!body || typeof body.action !== "string") return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
+  if (!auth.role || !["owner", "admin"].includes(auth.role)) return NextResponse.json({ error: "No tienes permiso para modificar productos." }, { status: 403 });
   const { sql, businessId } = auth;
 
   try {

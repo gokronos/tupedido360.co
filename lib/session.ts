@@ -10,6 +10,7 @@ export type AppSession = {
   name: string;
   businessName: string;
   businessSlug: string;
+  role?: "owner" | "admin" | "cashier" | "kitchen" | "waiter";
   expiresAt: number;
 };
 

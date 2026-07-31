@@ -16,12 +16,12 @@ export async function POST(request: Request) {
   let session;
 
   if (expectedEmail && expectedPassword && email === expectedEmail && body.password === expectedPassword) {
-    session = { email: expectedEmail, name: "Usuario de prueba", businessName: "Sazón 360 Demo", businessSlug: "sazon-360-demo" };
+    session = { email: expectedEmail, name: "Usuario de prueba", businessName: "Sazón 360 Demo", businessSlug: "sazon-360-demo", role: "owner" as const };
   } else if (process.env.DATABASE_URL) {
     const sql = await ensureSchema();
     const [account] = await sql`
       SELECT u.id AS user_id, u.name, u.email, u.password_hash,
-             b.id AS business_id, b.name AS business_name, b.slug AS business_slug
+             b.id AS business_id, b.name AS business_name, b.slug AS business_slug, bm.role
       FROM users u
       JOIN business_members bm ON bm.user_id = u.id AND bm.active = true
       JOIN businesses b ON b.id = bm.business_id
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       session = {
         userId: String(account.user_id), businessId: String(account.business_id), email: String(account.email),
         name: String(account.name), businessName: String(account.business_name), businessSlug: String(account.business_slug),
+        role: String(account.role) as "owner" | "admin" | "cashier" | "kitchen" | "waiter",
       };
     }
   }
