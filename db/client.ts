@@ -60,8 +60,33 @@ export async function ensureSchema() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS categories (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (business_id, name)
+      )`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS products (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        price_cop INTEGER NOT NULL CHECK (price_cop >= 0),
+        image_url TEXT NOT NULL DEFAULT '',
+        active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`;
     await sql`CREATE INDEX IF NOT EXISTS business_members_user_idx ON business_members(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS subscriptions_status_idx ON subscriptions(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS categories_business_idx ON categories(business_id, sort_order)`;
+    await sql`CREATE INDEX IF NOT EXISTS products_business_idx ON products(business_id, category_id)`;
   })();
 
   try {
