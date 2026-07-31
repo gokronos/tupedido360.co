@@ -112,6 +112,7 @@ export async function ensureSchema() {
       )`;
     await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS packaging_fee_cop INTEGER NOT NULL DEFAULT 0 CHECK (packaging_fee_cop >= 0)`;
     await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT '🍽️'`;
+    await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER CHECK (stock_quantity IS NULL OR stock_quantity >= 0)`;
     await sql`
       CREATE TABLE IF NOT EXISTS store_banners (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

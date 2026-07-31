@@ -76,6 +76,7 @@ CREATE TABLE products (
   packaging_fee_cop INTEGER NOT NULL DEFAULT 0 CHECK (packaging_fee_cop >= 0),
   icon TEXT NOT NULL DEFAULT '🍽️',
   image_url TEXT NOT NULL DEFAULT '',
+  stock_quantity INTEGER CHECK (stock_quantity IS NULL OR stock_quantity >= 0),
   active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

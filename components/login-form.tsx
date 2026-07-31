@@ -26,8 +26,12 @@ export function LoginForm({ expectedSlug }: { expectedSlug?: string }) {
       setLoading(false);
       return;
     }
-    router.push(result.destination ?? "/panel");
-    router.refresh();
+    if (result.destination?.startsWith("http://") || result.destination?.startsWith("https://")) {
+      window.location.href = result.destination;
+    } else {
+      router.push(result.destination ?? "/panel");
+      router.refresh();
+    }
   }
 
   return (

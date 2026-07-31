@@ -19,5 +19,17 @@ export default async function BusinessAdminPage({ params }: { params: Promise<{ 
   const sql = await ensureSchema();
   const [business] = await sql`SELECT name FROM businesses WHERE slug=${slug} AND status IN ('trial','active')`;
   if (!business) redirect("https://tupedido360.co/ingresar");
-  return <main className="auth-page"><section className="auth-box"><Link className="auth-brand" href="/"><Building2 size={23} />{String(business.name)}</Link><div className="auth-heading"><h1>Administración</h1><p>Ingresa para administrar {String(business.name)}.</p></div><LoginForm expectedSlug={slug} /><p className="auth-switch"><Link href="/">Volver al menú</Link></p></section></main>;
+  return (
+    <main className="auth-page">
+      <section className="auth-box">
+        <Link className="auth-brand" href="/"><Building2 size={23} /> TuPedido360</Link>
+        <div className="auth-heading">
+          <h1>Bienvenido de nuevo</h1>
+          <p>Ingresa para administrar tu negocio.</p>
+        </div>
+        <LoginForm />
+        <p className="auth-switch">¿Aún no tienes cuenta? <Link href="/">Crear negocio</Link></p>
+      </section>
+    </main>
+  );
 }

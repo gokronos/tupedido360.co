@@ -38,9 +38,20 @@ export async function POST(request: Request) {
   if(!business.accepting_orders||!business.openNow)return NextResponse.json({error:"El negocio está cerrado y no recibe pedidos en este momento."},{status:409});
   const ids = [...quantities.keys()];
   const products = await sql`
-    SELECT id, name, price_cop, packaging_fee_cop FROM products
+    SELECT id, name, price_cop, packaging_fee_cop, stock_quantity FROM products
     WHERE business_id=${business.id} AND active=true AND id IN ${sql(ids)}`;
   if (products.length !== ids.length) return NextResponse.json({ error: "Uno de los productos ya no está disponible." }, { status: 409 });
+  for (const product of products) {
+    const qty = quantities.get(String(product.id)) ?? 0;
+    const stock = product.stock_quantity !== null ? Number(product.stock_quantity) : null;
+    if (stock !== null && stock < qty) {
+      return NextResponse.json({
+        error: stock === 0
+          ? `El producto "${product.name}" está agotado.`
+          : `El producto "${product.name}" solo tiene ${stock} unidad(es) disponible(s).`
+      }, { status: 409 });
+    }
+  }
   const productsTotalCop = products.reduce((total, product) => total + Number(product.price_cop) * (quantities.get(String(product.id)) ?? 0), 0);
   const packagingTotalCop = products.reduce((total, product) => total + Number(product.packaging_fee_cop) * (quantities.get(String(product.id)) ?? 0), 0);
   const totalCop = productsTotalCop + packagingTotalCop;
@@ -63,6 +74,11 @@ export async function POST(request: Request) {
       await transaction`
         INSERT INTO order_items (order_id, product_id, product_name, unit_price_cop, quantity, subtotal_cop)
         VALUES (${created.id}, ${product.id}, ${product.name}, ${product.price_cop}, ${quantity}, ${Number(product.price_cop) * quantity})`;
+      if (product.stock_quantity !== null) {
+        await transaction`
+          UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ${quantity}), updated_at=now()
+          WHERE id=${product.id} AND stock_quantity IS NOT NULL`;
+      }
     }
     return { reference: String(created.reference), customerId: String(customer.id) };
   });

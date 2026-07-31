@@ -1,12 +1,8 @@
 import { Building2 } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
-import { currentSession } from "@/lib/session";
 
-export default async function LoginPage() {
-  if (await currentSession()) redirect("/panel");
-
+export default function LoginPage() {
   return (
     <main className="auth-page">
       <section className="auth-box">
