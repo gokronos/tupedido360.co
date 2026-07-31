@@ -24,9 +24,23 @@ export async function ensureSchema() {
         status TEXT NOT NULL DEFAULT 'trial' CHECK (status IN ('trial', 'active', 'past_due', 'suspended', 'cancelled')),
         timezone TEXT NOT NULL DEFAULT 'America/Bogota',
         currency TEXT NOT NULL DEFAULT 'COP',
+        description TEXT NOT NULL DEFAULT '',
+        logo_url TEXT NOT NULL DEFAULT '',
+        primary_color TEXT NOT NULL DEFAULT '#176b4d',
+        accent_color TEXT NOT NULL DEFAULT '#d6f35c',
+        address TEXT NOT NULL DEFAULT '',
+        public_phone TEXT NOT NULL DEFAULT '',
+        whatsapp TEXT NOT NULL DEFAULT '',
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS logo_url TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS primary_color TEXT NOT NULL DEFAULT '#176b4d'`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS accent_color TEXT NOT NULL DEFAULT '#d6f35c'`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS public_phone TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp TEXT NOT NULL DEFAULT ''`;
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
