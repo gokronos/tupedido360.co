@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ChevronLeft, Clock3, Minus, Plus, Search, ShoppingBag, Store, Truck, UserRound, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock3, Minus, Plus, Search, ShoppingBag, Store, Truck, UserRound, X } from "lucide-react";
 import { CSSProperties, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type Product = { id: string; categoryId: string | null; name: string; description: string; priceCop: number; packagingFeeCop: number; icon: string; imageUrl: string };
@@ -9,8 +9,9 @@ type Cart = Record<string, number>;
 type Customer={name:string;whatsapp:string;addresses:Array<{id:string;address:string;neighborhood:string;reference:string}>;orders:Array<{reference:string;orderType:string;status:string;paid:boolean;totalCop:number;packagingTotalCop:number;deliveryFeeCop:number|null;deliveryQuoteStatus:"not_applicable"|"pending_quote"|"quoted"|"confirmed";estimatedMinutes:number|null;createdAt:string}>};
 const money = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
 
-type Business={name:string;slug:string;description:string;logoUrl:string;primaryColor:string;accentColor:string;address:string;publicPhone:string;whatsapp:string};
-export function PublicStore({ business, categories, products }: { business: Business; categories: Category[]; products: Product[] }) {
+type Business={name:string;slug:string;description:string;logoUrl:string;primaryColor:string;accentColor:string;address:string;publicPhone:string;whatsapp:string;menuTemplate:string};
+type Banner={id:string;eyebrow:string;title:string;description:string;imageUrl:string};
+export function PublicStore({ business, categories, products, banners }: { business: Business; categories: Category[]; products: Product[]; banners:Banner[] }) {
   const [cart, setCart] = useState<Cart>({});
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
@@ -22,9 +23,11 @@ export function PublicStore({ business, categories, products }: { business: Busi
   const [confirmation, setConfirmation] = useState<{ reference: string; totalCop: number } | null>(null);
   const [customer,setCustomer]=useState<Customer|null>(null);
   const [customerOpen,setCustomerOpen]=useState(false);
+  const [bannerIndex,setBannerIndex]=useState(0);
   const loadCustomer=useCallback(async()=>{const response=await fetch(`/api/public/customers?slug=${encodeURIComponent(business.slug)}`,{cache:"no-store"});const result=await response.json();if(response.ok)setCustomer(result.customer)},[business.slug]);
   useEffect(()=>{const timer=setTimeout(()=>void loadCustomer(),0);return()=>clearTimeout(timer)},[loadCustomer]);
   useEffect(()=>{const interval=setInterval(()=>void loadCustomer(),10000);return()=>clearInterval(interval)},[loadCustomer]);
+  useEffect(()=>{if(banners.length<2)return;const interval=setInterval(()=>setBannerIndex(current=>(current+1)%banners.length),6000);return()=>clearInterval(interval)},[banners.length]);
   const visible = useMemo(() => products.filter((product) => (category === "all" || product.categoryId === category) && `${product.name} ${product.description}`.toLowerCase().includes(search.toLowerCase())), [products, category, search]);
   const cartItems = products.filter((product) => cart[product.id]).map((product) => ({ ...product, quantity: cart[product.id] }));
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -46,9 +49,9 @@ export function PublicStore({ business, categories, products }: { business: Busi
   }
 
   const storeStyle={"--store-primary":business.primaryColor,"--store-accent":business.accentColor} as CSSProperties;
-  return <main className="storefront" style={storeStyle}>
+  return <main className={`storefront template-${business.menuTemplate}`} style={storeStyle}>
     <header className="storefront-header"><div className="storefront-inner"><div className="storefront-brand"><span className={business.logoUrl?"has-logo":""} style={business.logoUrl?{backgroundImage:`url(${business.logoUrl})`}:undefined}>{!business.logoUrl&&<Store size={23} />}</span><div><strong>{business.name}</strong><small>Pedidos en línea</small></div></div><div className="storefront-actions"><button className="customer-orders-button" onClick={()=>setCustomerOpen(true)}><UserRound size={19}/><span>{customer?"Mis pedidos":"Seguimiento"}</span></button><button className="store-cart-button" onClick={() => setCartOpen(true)}><ShoppingBag size={20} /><span>Mi pedido</span>{itemCount > 0 && <b>{itemCount}</b>}</button></div></div></header>
-    <section className="storefront-intro"><div><p>Bienvenido</p><h1>{business.name}</h1><span>{business.description||"Elige tus productos y pide para domicilio o para llevar."}</span></div></section>
+    {banners.length?<StoreSlider banners={banners} index={bannerIndex%banners.length} onChange={setBannerIndex}/>:<section className="storefront-intro"><div><p>Bienvenido</p><h1>{business.name}</h1><span>{business.description||"Elige tus productos y pide para domicilio o para llevar."}</span></div></section>}
     <div className="storefront-tools"><label><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar en el menú" /></label><div><button className={category === "all" ? "active" : ""} onClick={() => setCategory("all")}>Todo</button>{categories.map((item) => <button className={category === item.id ? "active" : ""} onClick={() => setCategory(item.id)} key={item.id}>{item.name}</button>)}</div></div>
     <section className="storefront-menu"><div className="storefront-menu-heading"><h2>Nuestro menú</h2><span>{visible.length} productos</span></div>{visible.length ? <div className="store-product-grid">{visible.map((product) => <article key={product.id}><div className="store-product-image" style={product.imageUrl ? { backgroundImage: `url(${product.imageUrl})` } : undefined}>{!product.imageUrl && <span className="store-product-emoji">{product.icon || "🍽️"}</span>}</div><div className="store-product-body"><h3>{product.name}</h3><p>{product.description || "Preparado especialmente para ti."}</p>{product.packagingFeeCop > 0 && <small className="packaging-note">Recipiente: {money(product.packagingFeeCop)}</small>}<footer><strong>{money(product.priceCop)}</strong>{cart[product.id] ? <div className="quantity-control"><button onClick={() => quantity(product.id, -1)} aria-label={`Quitar ${product.name}`}><Minus size={16} /></button><span>{cart[product.id]}</span><button onClick={() => quantity(product.id, 1)} aria-label={`Agregar ${product.name}`}><Plus size={16} /></button></div> : <button className="add-product" onClick={() => quantity(product.id, 1)}><Plus size={17} /> Agregar</button>}</footer></div></article>)}</div> : <div className="store-empty">No encontramos productos con esa búsqueda.</div>}</section>
     <footer className="storefront-footer"><div><strong>{business.name}</strong>{business.address&&<span>{business.address}</span>}{business.publicPhone&&<a href={`tel:${business.publicPhone}`}>{business.publicPhone}</a>}{business.whatsapp&&<a href={`https://wa.me/${business.whatsapp}`} target="_blank" rel="noreferrer">WhatsApp</a>}</div><span>Impulsado por TuPedido360, un producto de Imagen Plus.</span></footer>
@@ -57,6 +60,8 @@ export function PublicStore({ business, categories, products }: { business: Busi
     {customerOpen&&<CustomerOrders customer={customer} slug={business.slug} reload={loadCustomer} onClose={()=>setCustomerOpen(false)}/>}
   </main>;
 }
+
+function StoreSlider({banners,index,onChange}:{banners:Banner[];index:number;onChange:(index:number)=>void}){const banner=banners[index];return <section className={`store-slider ${banner.imageUrl?"has-image":""}`} style={banner.imageUrl?{backgroundImage:`linear-gradient(90deg,rgba(10,30,22,.94),rgba(10,30,22,.25)),url(${banner.imageUrl})`}:undefined}><div className="store-slider-content"><p>{banner.eyebrow||"DESTACADO"}</p><h1>{banner.title}</h1><span>{banner.description}</span>{banners.length>1&&<div className="store-slider-controls"><button onClick={()=>onChange((index-1+banners.length)%banners.length)} aria-label="Banner anterior"><ChevronLeft size={20}/></button><div>{banners.map((item,itemIndex)=><button className={itemIndex===index?"active":""} onClick={()=>onChange(itemIndex)} aria-label={`Ver banner ${itemIndex+1}`} key={item.id}/>)}</div><button onClick={()=>onChange((index+1)%banners.length)} aria-label="Siguiente banner"><ChevronRight size={20}/></button></div>}</div></section>}
 
 function Checkout({ customer,orderType, setOrderType, productsTotal, packagingTotal, total, sending, error, onBack, onSubmit }: { customer:Customer|null;orderType: "pickup" | "delivery"; setOrderType: (value: "pickup" | "delivery") => void; productsTotal: number; packagingTotal: number; total: number; sending: boolean; error: string; onBack: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
   const address=customer?.addresses[0];

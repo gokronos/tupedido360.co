@@ -14,6 +14,7 @@ CREATE TABLE businesses (
   address TEXT NOT NULL DEFAULT '',
   public_phone TEXT NOT NULL DEFAULT '',
   whatsapp TEXT NOT NULL DEFAULT '',
+  menu_template TEXT NOT NULL DEFAULT 'classic',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -74,6 +75,19 @@ CREATE TABLE products (
   icon TEXT NOT NULL DEFAULT '🍽️',
   image_url TEXT NOT NULL DEFAULT '',
   active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE store_banners (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  eyebrow TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  image_url TEXT NOT NULL DEFAULT '',
+  active BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -31,6 +31,7 @@ export async function ensureSchema() {
         address TEXT NOT NULL DEFAULT '',
         public_phone TEXT NOT NULL DEFAULT '',
         whatsapp TEXT NOT NULL DEFAULT '',
+        menu_template TEXT NOT NULL DEFAULT 'classic',
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
@@ -41,6 +42,7 @@ export async function ensureSchema() {
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS address TEXT NOT NULL DEFAULT ''`;
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS public_phone TEXT NOT NULL DEFAULT ''`;
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS menu_template TEXT NOT NULL DEFAULT 'classic'`;
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -106,6 +108,20 @@ export async function ensureSchema() {
       )`;
     await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS packaging_fee_cop INTEGER NOT NULL DEFAULT 0 CHECK (packaging_fee_cop >= 0)`;
     await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT '🍽️'`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS store_banners (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        eyebrow TEXT NOT NULL DEFAULT '',
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '',
+        active BOOLEAN NOT NULL DEFAULT true,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`;
+    await sql`CREATE INDEX IF NOT EXISTS store_banners_business_idx ON store_banners(business_id, sort_order)`;
     await sql`
       CREATE TABLE IF NOT EXISTS media_assets (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
