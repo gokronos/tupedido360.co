@@ -42,9 +42,39 @@ export function SubscriptionManager() {
   if (!data) return <div className="catalog-loading">Cargando información de suscripción...</div>;
   const active = data.isLifetime || data.status === "active" || data.status === "trialing";
 
-  function payPlan(planName: string, price: number) {
-    const message = encodeURIComponent(`Hola TuPedido360, deseo activar el plan de suscripción *${planName}* (${money(price)}) para mi negocio *${data?.businessName || data?.businessSlug}* (${data?.businessSlug}.tupedido360.co).`);
-    window.open(`https://wa.me/573138866453?text=${message}`, "_blank");
+  const [payingPlan, setPayingPlan] = useState<string | null>(null);
+  const [payError, setPayError] = useState("");
+
+  async function payPlan(planId: string, planName: string, price: number) {
+    setPayError("");
+    setPayingPlan(planId);
+
+    try {
+      const res = await fetch("/api/subscriptions/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.initPoint) {
+        window.location.href = data.initPoint;
+        return;
+      }
+
+      if (data.setupRequired) {
+        // Fallback to WhatsApp if token not configured yet
+        const message = encodeURIComponent(`Hola TuPedido360, deseo activar el plan de suscripción *${planName}* (${money(price)}) para mi negocio *${data?.businessName || data?.businessSlug}* (${data?.businessSlug}.tupedido360.co).`);
+        window.open(`https://wa.me/573138866453?text=${message}`, "_blank");
+        return;
+      }
+
+      setPayError(data.error ?? "No fue posible iniciar el pago.");
+    } catch {
+      setPayError("Error de conexión al iniciar el pago.");
+    } finally {
+      setPayingPlan(null);
+    }
   }
 
   return (
@@ -89,6 +119,7 @@ export function SubscriptionManager() {
             </p>
           </div>
 
+          {payError && <p className="form-error" style={{ marginBottom: "1rem" }}>{payError}</p>}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
             {plans.map((plan) => (
               <div key={plan.id} style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: "12px", padding: "1.2rem", backgroundColor: "rgba(255,255,255,0.03)", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "1rem" }}>
@@ -104,16 +135,17 @@ export function SubscriptionManager() {
                   {plan.discount && <small style={{ color: "#d6f35c", fontWeight: 600, fontSize: "0.82rem", display: "block" }}>{plan.discount}</small>}
                 </div>
                 <button
-                  onClick={() => payPlan(plan.name, plan.priceCop)}
-                  style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "none", backgroundColor: "#176b4d", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: "0.9rem" }}
+                  disabled={payingPlan === plan.id}
+                  onClick={() => payPlan(plan.id, plan.name, plan.priceCop)}
+                  style={{ width: "100%", padding: "0.6rem 0.8rem", borderRadius: "8px", border: "none", backgroundColor: "#176b4d", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: "0.9rem", opacity: payingPlan === plan.id ? 0.7 : 1 }}
                 >
-                  Renovar {plan.name}
+                  {payingPlan === plan.id ? "Cargando..." : `Renovar ${plan.name}`}
                 </button>
               </div>
             ))}
           </div>
           <p className="subscription-support" style={{ marginTop: "1rem" }}>
-            También puedes pagar mediante Google Play en la APK de Android o solicitar activación directa con el administrador de TuPedido360.
+            Pagos procesados de forma 100% segura con Mercado Pago (PSE, Nequi, Tarjetas) o mediante activación directa de administración.
           </p>
         </div>
       )}
