@@ -21,3 +21,6 @@ npm run dev
 ```
 
 El esquema PostgreSQL inicial está en `db/schema.sql`.
+
+Las variables `DEMO_USER_EMAIL` y `DEMO_USER_PASSWORD` habilitan una cuenta
+temporal de desarrollo. No deben configurarse en producción.
