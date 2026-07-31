@@ -54,23 +54,24 @@ export function SubscriptionManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
       });
-      const data = await res.json();
+      const checkoutData = await res.json();
 
-      if (res.ok && data.initPoint) {
-        window.location.href = data.initPoint;
+      if (res.ok && checkoutData.initPoint) {
+        window.location.href = checkoutData.initPoint;
         return;
       }
 
-      if (data.setupRequired) {
-        // Fallback to WhatsApp if token not configured yet
-        const message = encodeURIComponent(`Hola TuPedido360, deseo activar el plan de suscripción *${planName}* (${money(price)}) para mi negocio *${data?.businessName || data?.businessSlug}* (${data?.businessSlug}.tupedido360.co).`);
+      if (checkoutData.setupRequired) {
+        // Fallback to WhatsApp if token not configured yet in Vercel
+        const message = encodeURIComponent(`Hola TuPedido360, deseo activar el plan de suscripción *${planName}* (${money(price)}) para mi negocio *${data?.businessName || data?.businessSlug || "mi negocio"}* (${data?.businessSlug || "negocio"}.tupedido360.co).`);
         window.open(`https://wa.me/573138866453?text=${message}`, "_blank");
         return;
       }
 
-      setPayError(data.error ?? "No fue posible iniciar el pago.");
-    } catch {
-      setPayError("Error de conexión al iniciar el pago.");
+      setPayError(checkoutData.error ?? "No fue posible iniciar el pago.");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Error de conexión al iniciar el pago.";
+      setPayError(errMsg);
     } finally {
       setPayingPlan(null);
     }
