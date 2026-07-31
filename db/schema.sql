@@ -15,6 +15,7 @@ CREATE TABLE businesses (
   public_phone TEXT NOT NULL DEFAULT '',
   whatsapp TEXT NOT NULL DEFAULT '',
   menu_template TEXT NOT NULL DEFAULT 'classic',
+  logo_size INTEGER NOT NULL DEFAULT 72 CHECK (logo_size BETWEEN 48 AND 96),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

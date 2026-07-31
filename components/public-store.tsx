@@ -9,7 +9,7 @@ type Cart = Record<string, number>;
 type Customer={name:string;whatsapp:string;addresses:Array<{id:string;address:string;neighborhood:string;reference:string}>;orders:Array<{reference:string;orderType:string;status:string;paid:boolean;totalCop:number;packagingTotalCop:number;deliveryFeeCop:number|null;deliveryQuoteStatus:"not_applicable"|"pending_quote"|"quoted"|"confirmed";estimatedMinutes:number|null;createdAt:string}>};
 const money = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
 
-type Business={name:string;slug:string;description:string;logoUrl:string;primaryColor:string;accentColor:string;address:string;publicPhone:string;whatsapp:string;menuTemplate:string};
+type Business={name:string;slug:string;description:string;logoUrl:string;logoSize:number;primaryColor:string;accentColor:string;address:string;publicPhone:string;whatsapp:string;menuTemplate:string};
 type Banner={id:string;eyebrow:string;title:string;description:string;imageUrl:string};
 type Hour={weekday:number;enabled:boolean;openTime:string;closeTime:string};
 export function PublicStore({ business, categories, products, banners, hours }: { business: Business; categories: Category[]; products: Product[]; banners:Banner[];hours:Hour[] }) {
@@ -51,7 +51,7 @@ export function PublicStore({ business, categories, products, banners, hours }: 
     setConfirmation(result); setCart({}); setSending(false); await loadCustomer();
   }
 
-  const storeStyle={"--store-primary":business.primaryColor,"--store-accent":business.accentColor} as CSSProperties;
+  const storeStyle={"--store-primary":business.primaryColor,"--store-accent":business.accentColor,"--store-logo-size":`${business.logoSize}px`} as CSSProperties;
   return <main className={`storefront template-${business.menuTemplate}`} style={storeStyle}>
     <header className="storefront-header"><div className="storefront-inner"><div className="storefront-brand"><span className={business.logoUrl?"has-logo":""} style={business.logoUrl?{backgroundImage:`url(${business.logoUrl})`}:undefined}>{!business.logoUrl&&<Store size={27} />}</span><div><strong>{business.name}</strong><small>{business.description||"Pedidos para llevar y a domicilio"}</small></div></div><div className="storefront-actions">{storeStatus&&<div className={`store-open-status ${storeStatus.open?"open":"closed"}`}><i/><span><strong>{storeStatus.open?"Abierto ahora":"Cerrado ahora"}</strong><small>{storeStatus.label}</small></span></div>}<button className="customer-orders-button" onClick={()=>setCustomerOpen(true)}><UserRound size={19}/><span>{customer?"Mis pedidos":"Seguimiento"}</span></button><button className="store-cart-button" onClick={() => setCartOpen(true)}><ShoppingBag size={20} /><span>Mi pedido</span>{itemCount > 0 && <b>{itemCount}</b>}</button></div></div></header>
     {banners.length?<StoreSlider banners={banners} index={bannerIndex%banners.length} onChange={setBannerIndex}/>:<section className="storefront-intro"><div><p>Bienvenido</p><h1>{business.name}</h1><span>{business.description||"Elige tus productos y pide para domicilio o para llevar."}</span></div></section>}
