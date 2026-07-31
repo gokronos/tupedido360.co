@@ -11,7 +11,7 @@ const PLAN_MAP: Record<string, { months: number; name: string; priceCop: number 
 
 export async function POST(request: Request) {
   const session = await currentSession();
-  if (!session) return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  if (!session?.userId || !session?.businessId) return NextResponse.json({ error: "No autenticado o sin negocio seleccionado." }, { status: 401 });
 
   const body = await request.json().catch(() => null) as { planId?: string } | null;
   const plan = body?.planId ? PLAN_MAP[body.planId] : null;
