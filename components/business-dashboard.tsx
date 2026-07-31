@@ -1,7 +1,7 @@
 "use client";
 
 import { BarChart3, Bell, Boxes, ChefHat, ClipboardList, CreditCard, ExternalLink, LayoutDashboard, LogOut, Palette, Settings, Store, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AppSession } from "@/lib/session";
 import { ProductManager } from "@/components/product-manager";
 import { OrdersManager } from "@/components/orders-manager";
@@ -11,6 +11,7 @@ import { WaiterDashboard } from "@/components/waiter-dashboard";
 import { SettingsManager } from "@/components/settings-manager";
 import { SalesHistory } from "@/components/sales-history";
 import { DesignManager } from "@/components/design-manager";
+import {SubscriptionManager} from "@/components/subscription-manager";
 
 const navigation = [
   { id: "summary", label: "Resumen", icon: LayoutDashboard },
@@ -21,13 +22,15 @@ const navigation = [
   { id: "team", label: "Equipo", icon: Users },
   { id: "kitchen", label: "Cocina", icon: ChefHat },
   { id: "design", label: "Diseño", icon: Palette },
+  { id: "subscription", label: "Suscripción", icon: CreditCard },
   { id: "settings", label: "Configuración", icon: Settings },
 ];
 
 export function BusinessDashboard({ session }: { session: AppSession }) {
-  const [section, setSection] = useState("summary");
+  const [section, setSection] = useState(session.role==="kitchen"?"kitchen":"summary");
   if (session.role === "waiter") return <WaiterDashboard session={session} />;
-  const visibleNavigation = navigation.filter((item) => item.id !== "sales" || ["owner","admin","cashier"].includes(session.role ?? ""));
+  const allowed:Record<string,string[]>={owner:["summary","orders","sales","products","tables","team","kitchen","design","subscription","settings"],admin:["summary","orders","sales","products","tables","team","kitchen","design","settings"],cashier:["summary","orders","sales","settings"],kitchen:["kitchen","settings"]};
+  const visibleNavigation = navigation.filter(item=>(allowed[session.role??""]??[]).includes(item.id));
 
   return (
     <main className="dashboard-shell">
@@ -38,34 +41,40 @@ export function BusinessDashboard({ session }: { session: AppSession }) {
       </aside>
       <section className="dashboard-main">
         <header className="dashboard-header">
-          <div><p>{session.role === "owner" ? "Panel del dueño" : "Panel del administrador"}</p><h1>{section === "products" ? "Productos" : section === "orders" ? "Pedidos" : section === "sales" ? "Historial y ventas" : section === "tables" ? "Mesas" : section === "team" ? "Equipo" : section === "design" ? "Diseño" : section === "settings" ? "Configuración" : `Buenos días, ${session.name}`}</h1></div>
+          <div><p>{session.role === "owner" ? "Panel del dueño" : session.role==="kitchen"?"Panel de cocina":"Panel del administrador"}</p><h1>{section === "products" ? "Productos" : section === "orders" ? "Pedidos" : section === "sales" ? "Historial y ventas" : section === "tables" ? "Mesas" : section === "team" ? "Equipo" : section === "design" ? "Diseño" : section==="subscription"?"Suscripción":section==="kitchen"?"Cocina" : section === "settings" ? "Configuración" : `Buenos días, ${session.name}`}</h1></div>
           <button className="icon-button" title="Notificaciones" aria-label="Notificaciones"><Bell size={20} /></button>
         </header>
-        {section === "summary" && <Summary session={session} onProducts={() => setSection("products")} />}
+        {section === "summary" && <Summary session={session} onProducts={() => setSection("products")} onSettings={()=>setSection("subscription")} />}
         {section === "orders" && <OrdersManager role={session.role} />}
+        {section === "kitchen" && <OrdersManager role={session.role} />}
         {section === "sales" && <SalesHistory />}
         {section === "products" && <ProductManager />}
         {section === "tables" && <TablesManager />}
         {section === "team" && <TeamManager />}
         {section === "design" && <DesignManager slug={session.businessSlug ?? ""} />}
+        {section === "subscription"&&<SubscriptionManager/>}
         {section === "settings" && <SettingsManager />}
-        {!['summary', 'orders', 'sales', 'products', 'tables', 'team', 'design', 'settings'].includes(section) && <PendingSection name={navigation.find((item) => item.id === section)?.label ?? "Sección"} />}
+        {!['summary', 'orders', 'sales', 'products', 'tables', 'team', 'kitchen', 'design','subscription', 'settings'].includes(section) && <PendingSection name={navigation.find((item) => item.id === section)?.label ?? "Sección"} />}
       </section>
     </main>
   );
 }
 
-function Summary({ session, onProducts }: { session: AppSession; onProducts: () => void }) {
+function Summary({ session, onProducts,onSettings }: { session: AppSession; onProducts: () => void;onSettings:()=>void }) {
+  const[data,setData]=useState<{metrics:{ordersToday:number;salesToday:number;activeOrders:number;activeProducts:number};subscription:{status:string;isLifetime:boolean;monthlyPriceCop:number;trialEndsAt:string}}|null>(null);
+  useEffect(()=>{const timer=setTimeout(async()=>{const response=await fetch("/api/dashboard",{cache:"no-store"});if(response.ok)setData(await response.json())},0);return()=>clearTimeout(timer)},[]);
+  const money=(value:number)=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(value);
+  const metrics=data?.metrics;
   return <>
-    <div className="trial-banner"><div><CreditCard size={21} /><span><strong>Periodo de prueba activo</strong><small>Tu primer mes no tiene costo.</small></span></div><button>Ver suscripción</button></div>
+    <div className="trial-banner"><div><CreditCard size={21} /><span><strong>{data?.subscription?.isLifetime?"Membresía vitalicia":data?.subscription?.status==="trialing"?"Periodo de prueba activo":"Suscripción mensual"}</strong><small>{data?.subscription?.isLifetime?"Sin pagos mensuales.":data?.subscription?.status==="trialing"?`Finaliza el ${new Date(data.subscription.trialEndsAt).toLocaleDateString("es-CO")}`:`Plan de ${money(data?.subscription?.monthlyPriceCop??30000)} al mes`}</small></span></div><button onClick={onSettings}>Ver suscripción</button></div>
     <div className="panel-section-title"><div><h2>Resumen de hoy</h2><p>La actividad de tu negocio aparecerá aquí.</p></div><a href={`https://${session.businessSlug}.tupedido360.co`} target="_blank" rel="noreferrer">Ver tienda <ExternalLink size={16} /></a></div>
     <div className="metric-grid">
-      <article><span>Pedidos</span><strong>0</strong><small>Sin pedidos nuevos</small></article>
-      <article><span>Ventas</span><strong>$0</strong><small>Total del día</small></article>
-      <article><span>En preparación</span><strong>0</strong><small>Cocina al día</small></article>
-      <article><span>Productos activos</span><strong>0</strong><small>Configura tu catálogo</small></article>
+      <article><span>Pedidos</span><strong>{metrics?.ordersToday??"..."}</strong><small>Recibidos hoy</small></article>
+      <article><span>Ventas</span><strong>{metrics?money(metrics.salesToday):"..."}</strong><small>Total del día</small></article>
+      <article><span>En proceso</span><strong>{metrics?.activeOrders??"..."}</strong><small>Pedidos activos</small></article>
+      <article><span>Productos activos</span><strong>{metrics?.activeProducts??"..."}</strong><small>Disponibles en el menú</small></article>
     </div>
-    <section className="empty-orders"><ClipboardList size={30} /><h3>Todavía no hay pedidos</h3><p>Comienza agregando los productos que ofrecerá tu negocio.</p><button onClick={onProducts}>Crear primer producto</button></section>
+    {metrics?.activeProducts===0&&<section className="empty-orders"><ClipboardList size={30} /><h3>Todavía no hay productos</h3><p>Comienza agregando los productos que ofrecerá tu negocio.</p><button onClick={onProducts}>Crear primer producto</button></section>}
   </>;
 }
 

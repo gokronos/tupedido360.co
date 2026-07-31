@@ -9,7 +9,7 @@ type Cart = Record<string, number>;
 type Customer={name:string;whatsapp:string;addresses:Array<{id:string;address:string;neighborhood:string;reference:string}>;orders:Array<{reference:string;orderType:string;status:string;paid:boolean;totalCop:number;packagingTotalCop:number;deliveryFeeCop:number|null;deliveryQuoteStatus:"not_applicable"|"pending_quote"|"quoted"|"confirmed";estimatedMinutes:number|null;createdAt:string}>};
 const money = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
 
-type Business={name:string;slug:string;description:string;logoUrl:string;logoSize:number;primaryColor:string;accentColor:string;address:string;publicPhone:string;whatsapp:string;menuTemplate:string};
+type Business={name:string;slug:string;description:string;logoUrl:string;logoSize:number;acceptingOrders:boolean;primaryColor:string;accentColor:string;address:string;publicPhone:string;whatsapp:string;menuTemplate:string};
 type Banner={id:string;eyebrow:string;title:string;description:string;imageUrl:string};
 type Hour={weekday:number;enabled:boolean;openTime:string;closeTime:string};
 export function PublicStore({ business, categories, products, banners, hours }: { business: Business; categories: Category[]; products: Product[]; banners:Banner[];hours:Hour[] }) {
@@ -30,7 +30,7 @@ export function PublicStore({ business, categories, products, banners, hours }: 
   useEffect(()=>{const timer=setTimeout(()=>void loadCustomer(),0);return()=>clearTimeout(timer)},[loadCustomer]);
   useEffect(()=>{const interval=setInterval(()=>void loadCustomer(),10000);return()=>clearInterval(interval)},[loadCustomer]);
   useEffect(()=>{if(banners.length<2)return;const interval=setInterval(()=>setBannerIndex(current=>(current+1)%banners.length),6000);return()=>clearInterval(interval)},[banners.length]);
-  useEffect(()=>{function refresh(){const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Bogota",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date());const names:Record<string,number>={Mon:0,Tue:1,Wed:2,Thu:3,Fri:4,Sat:5,Sun:6};const weekday=names[parts.find(part=>part.type==="weekday")?.value??"Mon"]??0;const time=`${parts.find(part=>part.type==="hour")?.value??"00"}:${parts.find(part=>part.type==="minute")?.value??"00"}`;const today=hours.find(hour=>hour.weekday===weekday);setStoreStatus(today?{open:today.enabled&&time>=today.openTime&&time<today.closeTime,label:today.enabled?`${today.openTime} a ${today.closeTime}`:"Cerrado hoy"}:{open:false,label:"Horario no configurado"})}refresh();const interval=setInterval(refresh,60000);return()=>clearInterval(interval)},[hours]);
+  useEffect(()=>{function refresh(){const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Bogota",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date());const names:Record<string,number>={Mon:0,Tue:1,Wed:2,Thu:3,Fri:4,Sat:5,Sun:6};const weekday=names[parts.find(part=>part.type==="weekday")?.value??"Mon"]??0;const time=`${parts.find(part=>part.type==="hour")?.value??"00"}:${parts.find(part=>part.type==="minute")?.value??"00"}`;const today=hours.find(hour=>hour.weekday===weekday);setStoreStatus(!business.acceptingOrders?{open:false,label:"Pedidos pausados"}:today?{open:today.enabled&&time>=today.openTime&&time<today.closeTime,label:today.enabled?`${today.openTime} a ${today.closeTime}`:"Cerrado hoy"}:{open:false,label:"Horario no configurado"})}refresh();const interval=setInterval(refresh,60000);return()=>clearInterval(interval)},[hours,business.acceptingOrders]);
   const visible = useMemo(() => products.filter((product) => (category === "all" || product.categoryId === category) && `${product.name} ${product.description}`.toLowerCase().includes(search.toLowerCase())), [products, category, search]);
   const cartItems = products.filter((product) => cart[product.id]).map((product) => ({ ...product, quantity: cart[product.id] }));
   const itemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -39,6 +39,7 @@ export function PublicStore({ business, categories, products, banners, hours }: 
   const total = productsTotal + packagingTotal;
 
   function quantity(id: string, change: number) {
+    if(change>0&&storeStatus&&!storeStatus.open){setError("El negocio está cerrado y no recibe pedidos en este momento.");return}
     setCart((current) => { const next = Math.max(0, (current[id] ?? 0) + change); const result = { ...current, [id]: next }; if (!next) delete result[id]; return result; });
   }
 

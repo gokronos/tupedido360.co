@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ensureSchema } from "@/db/client";
 import { currentSession } from "@/lib/session";
+import {canTransition} from "@/lib/order-rules";
 
 const statuses = new Set(["received", "accepted", "preparing", "ready", "on_way", "delivered", "cancelled"]);
 const paymentStatuses = new Set(["pending", "pending_verification", "verified"]);
@@ -54,6 +55,9 @@ export async function POST(request: Request) {
 
   if (body.action === "updateStatus" && body.status && statuses.has(body.status)) {
     if (!auth.role || !["owner", "admin", "kitchen"].includes(auth.role)) return NextResponse.json({ error: "No tienes permiso para cambiar el estado." }, { status: 403 });
+    const[current]=await auth.sql`SELECT status,paid,order_type FROM orders WHERE id=${body.id} AND business_id=${auth.businessId} AND deleted_at IS NULL`;
+    if(!current)return NextResponse.json({error:"Pedido no encontrado."},{status:404});
+    if(!canTransition(String(current.status),body.status,String(current.order_type),Boolean(current.paid)))return NextResponse.json({error:body.status==="delivered"&&!current.paid?"Registra el pago antes de entregar el pedido.":`No puedes pasar de ${current.status} a ${body.status}.`},{status:409});
     const [order] = await auth.sql`
       UPDATE orders SET status=${body.status}, updated_at=now()
       WHERE id=${body.id} AND business_id=${auth.businessId} AND deleted_at IS NULL

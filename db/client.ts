@@ -33,6 +33,7 @@ export async function ensureSchema() {
         whatsapp TEXT NOT NULL DEFAULT '',
         menu_template TEXT NOT NULL DEFAULT 'classic',
         logo_size INTEGER NOT NULL DEFAULT 72 CHECK (logo_size BETWEEN 48 AND 96),
+        accepting_orders BOOLEAN NOT NULL DEFAULT true,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
@@ -45,6 +46,7 @@ export async function ensureSchema() {
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS whatsapp TEXT NOT NULL DEFAULT ''`;
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS menu_template TEXT NOT NULL DEFAULT 'classic'`;
     await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS logo_size INTEGER NOT NULL DEFAULT 72`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS accepting_orders BOOLEAN NOT NULL DEFAULT true`;
     await sql`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

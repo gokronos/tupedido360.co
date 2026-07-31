@@ -17,6 +17,7 @@ export function ProductManager() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Product | null | undefined>(undefined);
+  const [categoryEditor,setCategoryEditor]=useState(false);
 
   const load = useCallback(async () => {
     const response = await fetch("/api/catalog");
@@ -41,15 +42,10 @@ export function ProductManager() {
     return true;
   }
 
-  async function addCategory() {
-    const name = window.prompt("Nombre de la nueva categoría");
-    if (name?.trim()) await action({ action: "createCategory", name });
-  }
-
   return <div className="catalog-manager">
     <div className="catalog-toolbar">
       <label className="catalog-search"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar productos" /></label>
-      <button className="secondary-action" onClick={addCategory}><Plus size={18} /> Categoría</button>
+      <button className="secondary-action" onClick={()=>setCategoryEditor(true)}><Plus size={18} /> Categoría</button>
       <button className="primary-compact" onClick={() => setEditing(null)}><PackagePlus size={18} /> Nuevo producto</button>
     </div>
     {error && <p className="form-error" role="alert">{error}</p>}
@@ -63,6 +59,7 @@ export function ProductManager() {
       <button className="row-icon danger-icon" onClick={() => { if (window.confirm(`¿Eliminar ${product.name}?`)) void action({ action: "deleteProduct", id: product.id }); }} title="Eliminar producto" aria-label={`Eliminar ${product.name}`}><Trash2 size={18} /></button>
     </article>)}</div>}
     {editing !== undefined && <ProductEditor product={editing} categories={catalog.categories} onClose={() => setEditing(undefined)} onSave={async (values) => { if (await action({ action: "saveProduct", ...values })) setEditing(undefined); }} />}
+    {categoryEditor&&<div className="editor-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setCategoryEditor(false)}}><form className="small-editor" onSubmit={async event=>{event.preventDefault();const name=String(new FormData(event.currentTarget).get("name")??"");if(await action({action:"createCategory",name}))setCategoryEditor(false)}}><header><div><h2>Nueva categoría</h2><p>Agrupa productos para encontrarlos rápidamente.</p></div><button type="button" onClick={()=>setCategoryEditor(false)}><X size={19}/></button></header><label><span>Nombre</span><input name="name" required minLength={2} maxLength={50} autoFocus placeholder="Ej. Hamburguesas"/></label><footer><button className="secondary-action" type="button" onClick={()=>setCategoryEditor(false)}>Cancelar</button><button className="primary-compact">Crear categoría</button></footer></form></div>}
   </div>;
 }
 

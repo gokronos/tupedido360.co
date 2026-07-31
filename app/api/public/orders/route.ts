@@ -2,10 +2,12 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ensureSchema } from "@/db/client";
 import { customerCookie, customerToken, currentCustomer } from "@/lib/customer-session";
+import {rateLimit,requestIp} from "@/lib/rate-limit";
 
 type OrderBody = { slug?: string; orderType?: string; customerName?: string; customerPhone?: string; deliveryAddress?: string; neighborhood?: string; addressReference?: string; paymentMethod?: string; notes?: string; items?: Array<{ productId?: string; quantity?: number }> };
 
 export async function POST(request: Request) {
+  if(!rateLimit(`public-order:${requestIp(request)}`,20,10*60_000))return NextResponse.json({error:"Se enviaron demasiados pedidos desde este dispositivo. Espera unos minutos."},{status:429});
   const body = await request.json().catch(() => null) as OrderBody | null;
   const slug = body?.slug?.trim().toLowerCase();
   const orderType = body?.orderType;
@@ -31,8 +33,9 @@ export async function POST(request: Request) {
   }
 
   const sql = await ensureSchema();
-  const [business] = await sql`SELECT id FROM businesses WHERE slug=${slug} AND status IN ('trial','active')`;
+  const [business] = await sql`SELECT b.id,b.accepting_orders,EXISTS(SELECT 1 FROM business_hours h WHERE h.business_id=b.id AND h.weekday=EXTRACT(ISODOW FROM timezone(b.timezone,now()))::int-1 AND h.enabled AND timezone(b.timezone,now())::time>=h.open_time AND timezone(b.timezone,now())::time<h.close_time) AS "openNow" FROM businesses b JOIN subscriptions s ON s.business_id=b.id WHERE b.slug=${slug} AND b.status IN ('trial','active') AND (s.is_lifetime OR (s.status='trialing' AND s.trial_ends_at>now()) OR (s.status='active' AND (s.current_period_ends_at IS NULL OR s.current_period_ends_at>now())))`;
   if (!business) return NextResponse.json({ error: "Negocio no disponible." }, { status: 404 });
+  if(!business.accepting_orders||!business.openNow)return NextResponse.json({error:"El negocio está cerrado y no recibe pedidos en este momento."},{status:409});
   const ids = [...quantities.keys()];
   const products = await sql`
     SELECT id, name, price_cop, packaging_fee_cop FROM products
@@ -63,9 +66,9 @@ export async function POST(request: Request) {
     }
     return { reference: String(created.reference), customerId: String(customer.id) };
   });
-  const previous = await currentCustomer();
+  const previous = await currentCustomer(slug);
   const issuedAt = previous?.businessId === String(business.id) && previous.customerId === order.customerId ? previous.issuedAt : Date.now() - 60_000;
   const response = NextResponse.json({ ok: true, reference: order.reference, totalCop, packagingTotalCop }, { status: 201 });
-  response.cookies.set(customerCookie.name,customerToken({customerId:order.customerId,businessId:String(business.id),businessSlug:slug,issuedAt,expiresAt:Date.now()+customerCookie.options.maxAge*1000}),customerCookie.options);
+  const cookie=customerCookie(slug);response.cookies.set(cookie.name,customerToken({customerId:order.customerId,businessId:String(business.id),businessSlug:slug,issuedAt,expiresAt:Date.now()+cookie.options.maxAge*1000}),cookie.options);
   return response;
 }

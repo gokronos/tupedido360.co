@@ -1,0 +1,2 @@
+export const orderTransitions:Record<string,string[]>={received:["accepted","cancelled"],accepted:["preparing","cancelled"],preparing:["ready","cancelled"],ready:["on_way","delivered","cancelled"],on_way:["delivered","cancelled"],delivered:[],cancelled:[]};
+export function canTransition(current:string,next:string,orderType:string,paid:boolean){if(!orderTransitions[current]?.includes(next))return false;if(next==="delivered"&&!paid)return false;if(next==="on_way"&&orderType!=="delivery")return false;return true}

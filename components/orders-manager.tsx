@@ -12,6 +12,7 @@ const statusInfo: Record<OrderStatus, { label: string; icon: typeof Clock3 }> = 
 };
 const filters: Array<{ id: "active" | "all" | OrderStatus; label: string }> = [{ id: "active", label: "Activos" }, { id: "received", label: "Nuevos" }, { id: "preparing", label: "Preparando" }, { id: "ready", label: "Listos" }, { id: "on_way", label: "En camino" }, { id: "delivered", label: "Entregados" }, { id: "all", label: "Todos" }];
 const paymentNames = { cash: "Efectivo", transfer: "Transferencia", pay_at_store: "Pago en el local" };
+const nextStatuses:Record<OrderStatus,OrderStatus[]>={received:["accepted","cancelled"],accepted:["preparing","cancelled"],preparing:["ready","cancelled"],ready:["on_way","delivered","cancelled"],on_way:["delivered","cancelled"],delivered:[],cancelled:[]};
 
 export function OrdersManager({role}:{role?:string}) {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -61,7 +62,7 @@ export function OrdersManager({role}:{role?:string}) {
 
 function OrderCard({ order, busy, canManagePayment, onAction }: { order: Order; busy: boolean; canManagePayment:boolean;onAction: (payload: Record<string, unknown>) => void }) {
   const StatusIcon = statusInfo[order.status].icon;
-  const statusOptions: OrderStatus[] = order.orderType === "delivery" ? ["received","accepted","preparing","ready","on_way","delivered","cancelled"] : ["received","accepted","preparing","ready","delivered","cancelled"];
+  const statusOptions: OrderStatus[] = [order.status,...nextStatuses[order.status].filter(status=>status!=="on_way"||order.orderType==="delivery")];
   const whatsapp = order.customerPhone.replace(/\D/g, "").replace(/^3/, "573");
   const quoteMessage = order.deliveryFeeCop === null ? "" : encodeURIComponent(`Hola ${order.customerName}, el domicilio de tu pedido ${order.reference} cuesta ${money(order.deliveryFeeCop)}. El total es ${money(order.totalCop)}${order.estimatedMinutes ? ` y el tiempo estimado es de ${order.estimatedMinutes} minutos` : ""}. ¿Deseas confirmar el pedido?`);
   function quote() {
