@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       businessName,
       businessSlug: slug,
       role: "owner",
+      platformRole: "user",
       expiresAt: Date.now() + sessionCookie.options.maxAge * 1000,
     }), sessionCookie.options);
     return response;

@@ -11,6 +11,7 @@ export type AppSession = {
   businessName: string;
   businessSlug: string;
   role?: "owner" | "admin" | "cashier" | "kitchen" | "waiter";
+  platformRole?: "user" | "support" | "superadmin";
   expiresAt: number;
 };
 
@@ -57,6 +58,7 @@ export const sessionCookie = {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
+    ...(process.env.NODE_ENV === "production" ? { domain: ".tupedido360.co" } : {}),
     path: "/",
     maxAge: 60 * 60 * 12,
   },

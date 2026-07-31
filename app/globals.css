@@ -63,6 +63,30 @@ a { color:inherit; }
   .domain-input > span { font-size:12px; padding:0 8px; }
 }
 
+.platform-admin { min-height:100vh; background:#f4f6f5; color:var(--ink); }
+.platform-admin > header { height:68px; padding:0 24px; display:flex; align-items:center; justify-content:space-between; background:#173d2d; color:#fff; }
+.platform-admin > header > div { display:flex; align-items:center; gap:10px; }
+.platform-admin > header > div > span { width:38px; height:38px; display:grid; place-items:center; border-radius:6px; background:#d6f35c; color:#173d2d; }
+.platform-admin > header > div > div { display:grid; }
+.platform-admin > header small { color:#b9c9c1; font-size:11px; }
+.platform-admin > header button { height:38px; padding:0 11px; display:flex; align-items:center; gap:6px; border:1px solid #557365; border-radius:6px; background:transparent; color:#fff; cursor:pointer; }
+.platform-admin > section { width:min(1050px,calc(100% - 32px)); margin:0 auto; padding:30px 0; }
+.platform-heading { display:flex; justify-content:space-between; align-items:end; gap:15px; margin-bottom:18px; }
+.platform-heading p { margin:0 0 4px; color:var(--green); font-size:12px; font-weight:900; text-transform:uppercase; }
+.platform-heading h1 { margin:0; font-size:27px; }
+.platform-heading > span { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; }
+.platform-businesses { display:grid; gap:9px; }
+.platform-businesses article { min-height:78px; padding:13px; display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:13px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+.platform-business-icon { width:43px; height:43px; display:grid; place-items:center; border-radius:6px; background:#e5f1eb; color:var(--green); }
+.platform-businesses article > div:nth-child(2) { display:grid; gap:2px; min-width:0; }
+.platform-businesses article > div:nth-child(2) span { overflow:hidden; color:var(--muted); font-size:12px; text-overflow:ellipsis; }
+.platform-businesses article small { display:flex; align-items:center; gap:4px; color:var(--muted); }
+.platform-business-state { display:grid; justify-items:end; gap:3px; }
+.platform-business-state b { color:var(--green); font-size:12px; }
+.platform-business-state span { color:var(--muted); font-size:11px; text-transform:capitalize; }
+.platform-businesses article > a { width:38px; height:38px; display:grid; place-items:center; border:1px solid var(--line); border-radius:6px; color:var(--green); }
+@media(max-width:600px){.platform-admin > header{padding:0 14px}.platform-admin > header button{width:40px;padding:0;justify-content:center;font-size:0}.platform-businesses article{grid-template-columns:auto 1fr auto}.platform-business-state{grid-column:2;justify-items:start}.platform-businesses article>a{grid-column:3;grid-row:1/3}.platform-heading{align-items:start;flex-direction:column}}
+
 .manager-heading { display:flex; align-items:end; justify-content:space-between; gap:16px; margin-bottom:18px; }
 .manager-heading h2 { margin:0 0 5px; font-size:21px; }
 .manager-heading p { margin:0; color:var(--muted); font-size:14px; }

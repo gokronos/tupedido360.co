@@ -4,7 +4,7 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function LoginForm() {
+export function LoginForm({ expectedSlug }: { expectedSlug?: string }) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -18,7 +18,7 @@ export function LoginForm() {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ login: form.get("login"), password: form.get("password") }),
+      body: JSON.stringify({ login: form.get("login"), password: form.get("password"), expectedSlug }),
     });
     const result = await response.json();
     if (!response.ok) {
@@ -26,7 +26,7 @@ export function LoginForm() {
       setLoading(false);
       return;
     }
-    router.push("/panel");
+    router.push(result.destination ?? "/panel");
     router.refresh();
   }
 
