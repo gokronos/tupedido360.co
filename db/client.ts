@@ -125,9 +125,16 @@ export async function ensureSchema() {
         customer_name TEXT NOT NULL,
         customer_phone TEXT NOT NULL,
         delivery_address TEXT NOT NULL DEFAULT '',
+        neighborhood TEXT NOT NULL DEFAULT '',
+        address_reference TEXT NOT NULL DEFAULT '',
         notes TEXT NOT NULL DEFAULT '',
-        status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'preparing', 'ready', 'delivered', 'cancelled')),
+        status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received', 'accepted', 'preparing', 'ready', 'on_way', 'delivered', 'cancelled')),
         paid BOOLEAN NOT NULL DEFAULT false,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
+        payment_status TEXT NOT NULL DEFAULT 'pending',
+        delivery_fee_cop INTEGER CHECK (delivery_fee_cop >= 0),
+        delivery_quote_status TEXT NOT NULL DEFAULT 'not_applicable',
+        estimated_minutes INTEGER CHECK (estimated_minutes BETWEEN 5 AND 240),
         table_id UUID,
         created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
         total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
@@ -137,6 +144,20 @@ export async function ensureSchema() {
       )`;
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT false`;
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS packaging_total_cop INTEGER NOT NULL DEFAULT 0 CHECK (packaging_total_cop >= 0)`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS neighborhood TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address_reference TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash'`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'pending'`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee_cop INTEGER CHECK (delivery_fee_cop >= 0)`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_quote_status TEXT NOT NULL DEFAULT 'not_applicable'`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER CHECK (estimated_minutes BETWEEN 5 AND 240)`;
+    await sql`ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check`;
+    await sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='orders_status_v3_check') THEN
+          ALTER TABLE orders ADD CONSTRAINT orders_status_v3_check CHECK (status IN ('received','accepted','preparing','ready','on_way','delivered','cancelled'));
+        END IF;
+      END $$`;
     await sql`
       CREATE TABLE IF NOT EXISTS restaurant_tables (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -3,14 +3,15 @@
 import { CheckCircle2, Clock3, MapPin, PackageCheck, Phone, RefreshCw, ShoppingBag, Truck, UtensilsCrossed } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-type OrderStatus = "received" | "preparing" | "ready" | "delivered" | "cancelled";
+type OrderStatus = "received" | "accepted" | "preparing" | "ready" | "on_way" | "delivered" | "cancelled";
 type OrderItem = { productName: string; unitPriceCop: number; quantity: number; subtotalCop: number };
-type Order = { id: string; reference: string; orderType: "delivery" | "pickup" | "dine_in"; customerName: string; customerPhone: string; deliveryAddress: string; notes: string; status: OrderStatus; paid: boolean; totalCop: number; packagingTotalCop: number; createdAt: string; tableName?: string; createdByName?: string; items: OrderItem[] };
+type Order = { id: string; reference: string; orderType: "delivery" | "pickup" | "dine_in"; customerName: string; customerPhone: string; deliveryAddress: string; neighborhood: string; addressReference: string; notes: string; status: OrderStatus; paid: boolean; paymentMethod: "cash" | "transfer" | "pay_at_store"; paymentStatus: "pending" | "pending_verification" | "verified"; deliveryFeeCop: number | null; deliveryQuoteStatus: "not_applicable" | "pending_quote" | "quoted" | "confirmed"; estimatedMinutes: number | null; totalCop: number; packagingTotalCop: number; createdAt: string; updatedAt: string; tableName?: string; createdByName?: string; items: OrderItem[] };
 const money = (value: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(value);
 const statusInfo: Record<OrderStatus, { label: string; icon: typeof Clock3 }> = {
-  received: { label: "Recibido", icon: Clock3 }, preparing: { label: "Preparando", icon: UtensilsCrossed }, ready: { label: "Listo", icon: PackageCheck }, delivered: { label: "Entregado", icon: CheckCircle2 }, cancelled: { label: "Cancelado", icon: Clock3 },
+  received: { label: "Recibido", icon: Clock3 }, accepted: { label: "Aceptado", icon: CheckCircle2 }, preparing: { label: "Preparando", icon: UtensilsCrossed }, ready: { label: "Listo", icon: PackageCheck }, on_way: { label: "En camino", icon: Truck }, delivered: { label: "Entregado", icon: CheckCircle2 }, cancelled: { label: "Cancelado", icon: Clock3 },
 };
-const filters: Array<{ id: "active" | "all" | OrderStatus; label: string }> = [{ id: "active", label: "Activos" }, { id: "received", label: "Recibidos" }, { id: "preparing", label: "Preparando" }, { id: "ready", label: "Listos" }, { id: "delivered", label: "Entregados" }, { id: "all", label: "Todos" }];
+const filters: Array<{ id: "active" | "all" | OrderStatus; label: string }> = [{ id: "active", label: "Activos" }, { id: "received", label: "Nuevos" }, { id: "preparing", label: "Preparando" }, { id: "ready", label: "Listos" }, { id: "on_way", label: "En camino" }, { id: "delivered", label: "Entregados" }, { id: "all", label: "Todos" }];
+const paymentNames = { cash: "Efectivo", transfer: "Transferencia", pay_at_store: "Pago en el local" };
 
 export function OrdersManager() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -58,14 +59,24 @@ export function OrdersManager() {
 
 function OrderCard({ order, busy, onAction }: { order: Order; busy: boolean; onAction: (payload: Record<string, unknown>) => void }) {
   const StatusIcon = statusInfo[order.status].icon;
-  const next: Partial<Record<OrderStatus, OrderStatus>> = { received: "preparing", preparing: "ready", ready: "delivered" };
+  const statusOptions: OrderStatus[] = order.orderType === "delivery" ? ["received","accepted","preparing","ready","on_way","delivered","cancelled"] : ["received","accepted","preparing","ready","delivered","cancelled"];
+  const whatsapp = order.customerPhone.replace(/\D/g, "").replace(/^3/, "573");
+  const quoteMessage = order.deliveryFeeCop === null ? "" : encodeURIComponent(`Hola ${order.customerName}, el domicilio de tu pedido ${order.reference} cuesta ${money(order.deliveryFeeCop)}. El total es ${money(order.totalCop)}${order.estimatedMinutes ? ` y el tiempo estimado es de ${order.estimatedMinutes} minutos` : ""}. ¿Deseas confirmar el pedido?`);
+  function quote() {
+    const feeCop = Number(window.prompt("Valor del domicilio", String(order.deliveryFeeCop ?? "")));
+    if (!Number.isFinite(feeCop) || feeCop < 0) return;
+    const estimatedMinutes = Number(window.prompt("Tiempo estimado en minutos", String(order.estimatedMinutes ?? 30)));
+    if (!Number.isFinite(estimatedMinutes)) return;
+    onAction({ action: "quoteDelivery", id: order.id, feeCop, estimatedMinutes });
+  }
   return <article className={`order-card status-${order.status}`}>
     <header><div><span className="order-reference">{order.reference}</span><span className={`order-status ${order.status}`}><StatusIcon size={14} />{statusInfo[order.status].label}</span></div><time>{new Date(order.createdAt).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</time></header>
-    <div className="order-customer"><strong>{order.tableName ?? order.customerName}</strong>{order.customerPhone && <a href={`tel:${order.customerPhone}`}><Phone size={14} />{order.customerPhone}</a>}<span>{order.orderType === "delivery" ? <><Truck size={15} />Domicilio</> : order.orderType === "dine_in" ? <><UtensilsCrossed size={15} />Mesa · {order.createdByName ?? "Mesero"}</> : <><ShoppingBag size={15} />Para llevar</>}</span>{order.deliveryAddress && <address><MapPin size={14} />{order.deliveryAddress}</address>}</div>
+    <div className="order-customer"><strong>{order.tableName ?? order.customerName}</strong>{order.customerPhone && <a href={`tel:${order.customerPhone}`}><Phone size={14} />{order.customerPhone}</a>}<span>{order.orderType === "delivery" ? <><Truck size={15} />Domicilio</> : order.orderType === "dine_in" ? <><UtensilsCrossed size={15} />Mesa · {order.createdByName ?? "Mesero"}</> : <><ShoppingBag size={15} />Para llevar</>}</span>{order.deliveryAddress && <address><MapPin size={14} />{order.deliveryAddress}{order.neighborhood ? `, ${order.neighborhood}` : ""}{order.addressReference ? ` · ${order.addressReference}` : ""}</address>}<small>Pago: {paymentNames[order.paymentMethod] ?? order.paymentMethod}</small></div>
     <div className="order-lines">{order.items.map((item, index) => <div key={`${item.productName}-${index}`}><span><b>{item.quantity}x</b>{item.productName}</span><strong>{money(item.subtotalCop)}</strong></div>)}</div>
     {order.packagingTotalCop > 0 && <div className="order-packaging"><span>Recipientes</span><strong>{money(order.packagingTotalCop)}</strong></div>}
+    {order.orderType === "delivery" && <div className="delivery-quote"><div><strong>{order.deliveryFeeCop === null ? "Domicilio por cotizar" : `Domicilio: ${money(order.deliveryFeeCop)}`}</strong>{order.estimatedMinutes && <span>{order.estimatedMinutes} minutos estimados</span>}</div><div><button disabled={busy} onClick={quote}>{order.deliveryFeeCop === null ? "Cotizar" : "Cambiar tarifa"}</button>{order.deliveryFeeCop !== null && order.customerPhone && <a href={`https://wa.me/${whatsapp}?text=${quoteMessage}`} target="_blank" rel="noreferrer">Enviar por WhatsApp</a>}{order.deliveryFeeCop !== null && order.deliveryQuoteStatus !== "confirmed" && <button disabled={busy} onClick={() => onAction({ action: "confirmDelivery", id: order.id })}>Cliente confirmó</button>}</div></div>}
     {order.notes && <p className="order-notes">Nota: {order.notes}</p>}
     <div className="order-total"><span>Total</span><strong>{money(order.totalCop)}</strong></div>
-    <footer><button className={order.paid ? "paid" : "payment-pending"} disabled={busy} onClick={() => onAction({ action: "togglePaid", id: order.id })}>{order.paid ? "Pagado" : "Marcar pagado"}</button>{next[order.status] && <button className="advance-order" disabled={busy} onClick={() => onAction({ action: "updateStatus", id: order.id, status: next[order.status] })}>{busy ? "Guardando..." : `Pasar a ${statusInfo[next[order.status]!].label}`}</button>}{!["delivered", "cancelled"].includes(order.status) && <button className="cancel-order" disabled={busy} onClick={() => { if (window.confirm(`¿Cancelar el pedido ${order.reference}?`)) onAction({ action: "updateStatus", id: order.id, status: "cancelled" }); }}>Cancelar</button>}</footer>
+    <footer><label><span>Pago</span><select value={order.paymentStatus} disabled={busy} onChange={(event) => onAction({ action: "updatePaymentStatus", id: order.id, status: event.target.value })}><option value="pending">Pendiente</option>{order.paymentMethod === "transfer" && <option value="pending_verification">Por verificar</option>}<option value="verified">Verificado</option></select></label><label><span>Estado</span><select value={order.status} disabled={busy} onChange={(event) => onAction({ action: "updateStatus", id: order.id, status: event.target.value })}>{statusOptions.map((status) => <option value={status} key={status}>{statusInfo[status].label}</option>)}</select></label></footer>
   </article>;
 }
