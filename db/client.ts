@@ -156,6 +156,9 @@ export async function ensureSchema() {
         delivery_quote_status TEXT NOT NULL DEFAULT 'not_applicable',
         estimated_minutes INTEGER CHECK (estimated_minutes BETWEEN 5 AND 240),
         customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+        deleted_at TIMESTAMPTZ,
+        deleted_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        deletion_reason TEXT NOT NULL DEFAULT '',
         table_id UUID,
         created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
         total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
@@ -173,6 +176,9 @@ export async function ensureSchema() {
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_quote_status TEXT NOT NULL DEFAULT 'not_applicable'`;
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_minutes INTEGER CHECK (estimated_minutes BETWEEN 5 AND 240)`;
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id) ON DELETE SET NULL`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS deletion_reason TEXT NOT NULL DEFAULT ''`;
     await sql`ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check`;
     await sql`
       DO $$ BEGIN
@@ -208,6 +214,21 @@ export async function ensureSchema() {
         quantity INTEGER NOT NULL CHECK (quantity > 0),
         subtotal_cop INTEGER NOT NULL CHECK (subtotal_cop >= 0)
       )`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS order_deletion_log (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id UUID NOT NULL,
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        order_reference TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        deleted_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        deleted_by_name TEXT NOT NULL,
+        deleted_by_role TEXT NOT NULL,
+        order_snapshot JSONB NOT NULL,
+        tenant_purged_at TIMESTAMPTZ,
+        deleted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`;
+    await sql`ALTER TABLE order_deletion_log ADD COLUMN IF NOT EXISTS tenant_purged_at TIMESTAMPTZ`;
     await sql`CREATE INDEX IF NOT EXISTS business_members_user_idx ON business_members(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS subscriptions_status_idx ON subscriptions(status)`;
     await sql`CREATE INDEX IF NOT EXISTS categories_business_idx ON categories(business_id, sort_order)`;
@@ -217,6 +238,7 @@ export async function ensureSchema() {
     await sql`CREATE INDEX IF NOT EXISTS customer_addresses_customer_idx ON customer_addresses(customer_id, last_used_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS orders_business_idx ON orders(business_id, created_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS order_deletion_log_business_idx ON order_deletion_log(business_id, deleted_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS restaurant_tables_business_idx ON restaurant_tables(business_id, active)`;
   })();
 

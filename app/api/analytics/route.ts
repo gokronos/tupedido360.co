@@ -35,22 +35,22 @@ export async function GET(request: Request) {
       COALESCE(SUM(packaging_total_cop) FILTER (WHERE status <> 'cancelled'),0)::int AS "packagingSalesCop",
       COALESCE(SUM(delivery_fee_cop) FILTER (WHERE status <> 'cancelled'),0)::int AS "deliverySalesCop",
       COUNT(*) FILTER (WHERE status='cancelled')::int AS "cancelledCount"
-    FROM orders WHERE business_id=${session.businessId}
+    FROM orders WHERE business_id=${session.businessId} AND deleted_at IS NULL
       AND (created_at AT TIME ZONE ${timezone})::date BETWEEN ${start}::date AND ${end}::date`;
   const products = await sql`
     SELECT oi.product_name AS name,SUM(oi.quantity)::int AS quantity,SUM(oi.subtotal_cop)::int AS "salesCop"
     FROM order_items oi JOIN orders o ON o.id=oi.order_id
-    WHERE o.business_id=${session.businessId} AND o.status<>'cancelled'
+    WHERE o.business_id=${session.businessId} AND o.status<>'cancelled' AND o.deleted_at IS NULL
       AND (o.created_at AT TIME ZONE ${timezone})::date BETWEEN ${start}::date AND ${end}::date
     GROUP BY oi.product_name ORDER BY quantity DESC,"salesCop" DESC LIMIT 20`;
   const daily = await sql`
     SELECT (created_at AT TIME ZONE ${timezone})::date::text AS date,COUNT(*)::int AS orders,COALESCE(SUM(total_cop),0)::int AS "salesCop"
-    FROM orders WHERE business_id=${session.businessId} AND status<>'cancelled'
+    FROM orders WHERE business_id=${session.businessId} AND status<>'cancelled' AND deleted_at IS NULL
       AND (created_at AT TIME ZONE ${timezone})::date BETWEEN ${start}::date AND ${end}::date
     GROUP BY 1 ORDER BY 1`;
   const history = await sql`
     SELECT reference,order_type AS "orderType",customer_name AS "customerName",status,paid,total_cop AS "totalCop",created_at AS "createdAt"
-    FROM orders WHERE business_id=${session.businessId}
+    FROM orders WHERE business_id=${session.businessId} AND deleted_at IS NULL
       AND (created_at AT TIME ZONE ${timezone})::date BETWEEN ${start}::date AND ${end}::date
     ORDER BY created_at DESC LIMIT 100`;
   return NextResponse.json({ period: { from: start, to: end }, summary, products, daily, history });

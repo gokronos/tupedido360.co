@@ -1,0 +1,7 @@
+"use client";
+import {Trash2} from "lucide-react";
+import {useRouter} from "next/navigation";
+import {useState} from "react";
+type Order={id:string;reference:string;businessName:string;customerName:string;totalCop:number;createdAt:string};
+const money=(value:number)=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(value);
+export function PlatformOrders({orders}:{orders:Order[]}){const router=useRouter();const[busy,setBusy]=useState("");async function remove(order:Order){const reason=window.prompt(`Motivo para eliminar ${order.reference} de ${order.businessName}`);if(reason===null)return;setBusy(order.id);const response=await fetch("/api/admin/orders",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:order.id,reason})});const result=await response.json();if(!response.ok)window.alert(result.error);else router.refresh();setBusy("")}return <div className="platform-live-orders">{orders.map(order=><article key={order.id}><div><strong>{order.reference}</strong><span>{order.businessName}</span></div><div><b>{order.customerName}</b><span>{new Date(order.createdAt).toLocaleString("es-CO")}</span></div><strong>{money(order.totalCop)}</strong><button disabled={busy===order.id} onClick={()=>remove(order)}><Trash2 size={16}/>{busy===order.id?"Eliminando...":"Eliminar"}</button></article>)}{!orders.length&&<p className="sales-empty">No hay pedidos activos en la plataforma.</p>}</div>}

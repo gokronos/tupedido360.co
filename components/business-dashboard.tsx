@@ -40,7 +40,7 @@ export function BusinessDashboard({ session }: { session: AppSession }) {
           <button className="icon-button" title="Notificaciones" aria-label="Notificaciones"><Bell size={20} /></button>
         </header>
         {section === "summary" && <Summary session={session} onProducts={() => setSection("products")} />}
-        {section === "orders" && <OrdersManager />}
+        {section === "orders" && <OrdersManager role={session.role} />}
         {section === "sales" && <SalesHistory />}
         {section === "products" && <ProductManager />}
         {section === "tables" && <TablesManager />}

@@ -127,6 +127,9 @@ CREATE TABLE orders (
   delivery_quote_status TEXT NOT NULL DEFAULT 'not_applicable',
   estimated_minutes INTEGER CHECK (estimated_minutes BETWEEN 5 AND 240),
   customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+  deleted_at TIMESTAMPTZ,
+  deleted_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  deletion_reason TEXT NOT NULL DEFAULT '',
   table_id UUID,
   created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
@@ -156,6 +159,20 @@ CREATE TABLE order_items (
   subtotal_cop INTEGER NOT NULL CHECK (subtotal_cop >= 0)
 );
 
+CREATE TABLE order_deletion_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL,
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  order_reference TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  deleted_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  deleted_by_name TEXT NOT NULL,
+  deleted_by_role TEXT NOT NULL,
+  order_snapshot JSONB NOT NULL,
+  tenant_purged_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX business_members_user_idx ON business_members(user_id);
 CREATE UNIQUE INDEX users_username_lower_idx ON users(lower(username)) WHERE username IS NOT NULL;
 CREATE INDEX subscriptions_status_idx ON subscriptions(status);
@@ -166,4 +183,5 @@ CREATE INDEX customers_business_idx ON customers(business_id, whatsapp);
 CREATE INDEX customer_addresses_customer_idx ON customer_addresses(customer_id, last_used_at DESC);
 CREATE INDEX orders_business_idx ON orders(business_id, created_at DESC);
 CREATE INDEX order_items_order_idx ON order_items(order_id);
+CREATE INDEX order_deletion_log_business_idx ON order_deletion_log(business_id, deleted_at DESC);
 CREATE INDEX restaurant_tables_business_idx ON restaurant_tables(business_id, active);
