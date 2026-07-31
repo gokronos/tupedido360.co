@@ -88,6 +88,26 @@ CREATE TABLE media_assets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE customers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  whatsapp TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (business_id, whatsapp)
+);
+
+CREATE TABLE customer_addresses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  address TEXT NOT NULL,
+  neighborhood TEXT NOT NULL DEFAULT '',
+  reference TEXT NOT NULL DEFAULT '',
+  last_used_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (customer_id, address, neighborhood)
+);
+
 CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
@@ -106,6 +126,7 @@ CREATE TABLE orders (
   delivery_fee_cop INTEGER CHECK (delivery_fee_cop >= 0),
   delivery_quote_status TEXT NOT NULL DEFAULT 'not_applicable',
   estimated_minutes INTEGER CHECK (estimated_minutes BETWEEN 5 AND 240),
+  customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
   table_id UUID,
   created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   total_cop INTEGER NOT NULL CHECK (total_cop >= 0),
@@ -141,6 +162,8 @@ CREATE INDEX subscriptions_status_idx ON subscriptions(status);
 CREATE INDEX categories_business_idx ON categories(business_id, sort_order);
 CREATE INDEX products_business_idx ON products(business_id, category_id);
 CREATE INDEX media_assets_business_idx ON media_assets(business_id, created_at DESC);
+CREATE INDEX customers_business_idx ON customers(business_id, whatsapp);
+CREATE INDEX customer_addresses_customer_idx ON customer_addresses(customer_id, last_used_at DESC);
 CREATE INDEX orders_business_idx ON orders(business_id, created_at DESC);
 CREATE INDEX order_items_order_idx ON order_items(order_id);
 CREATE INDEX restaurant_tables_business_idx ON restaurant_tables(business_id, active);
