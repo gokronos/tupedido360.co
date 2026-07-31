@@ -11,7 +11,7 @@ const PLAN_MAP: Record<string, { months: number; name: string; priceCop: number 
 
 export async function POST(request: Request) {
   const session = await currentSession();
-  if (!session?.userId || !session?.businessId) return NextResponse.json({ error: "No autenticado o sin negocio seleccionado." }, { status: 401 });
+  if (!session?.userId) return NextResponse.json({ error: "No autenticado. Por favor inicia sesión nuevamente." }, { status: 401 });
 
   const body = await request.json().catch(() => null) as { planId?: string } | null;
   const plan = body?.planId ? PLAN_MAP[body.planId] : null;
@@ -19,12 +19,16 @@ export async function POST(request: Request) {
   if (!plan) return NextResponse.json({ error: "Plan de suscripción no válido." }, { status: 400 });
 
   const sql = await ensureSchema();
+  const targetBusinessId = session.businessId ?? null;
+  const targetBusinessSlug = session.businessSlug ?? null;
+
   const [membership] = await sql`
     SELECT b.id, b.name, b.slug, u.email
     FROM business_memberships bm
     JOIN businesses b ON b.id = bm.business_id
     JOIN users u ON u.id = bm.user_id
-    WHERE bm.user_id = ${session.userId} AND bm.business_id = ${session.businessId}
+    WHERE bm.user_id = ${session.userId}
+    ORDER BY (CASE WHEN bm.business_id = ${targetBusinessId} THEN 1 WHEN b.slug = ${targetBusinessSlug} THEN 2 ELSE 3 END) ASC
     LIMIT 1
   `;
 

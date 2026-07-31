@@ -54,7 +54,7 @@ export function SubscriptionManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
       });
-      const checkoutData = await res.json();
+      const checkoutData = await res.json().catch(() => ({ error: "Error de respuesta del servidor al iniciar el pago." }));
 
       if (res.ok && checkoutData.initPoint) {
         window.location.href = checkoutData.initPoint;
