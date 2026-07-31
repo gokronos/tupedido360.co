@@ -61,10 +61,10 @@ export function PlatformBusinesses({ businesses }: { businesses: Business[] }) {
                 <option value="6">+6 Meses ($150.000)</option>
                 <option value="12">+1 Año ($280.000)</option>
               </select>
-              <button disabled={busy === business.id} onClick={() => action(business, "toggleLifetime", business.isLifetime ? `¿Quitar la membresía vitalicia de ${business.name}?` : `¿Dar membresía vitalicia a ${business.name}?`)} title={business.isLifetime ? "Quitar membresía vitalicia" : "Dar membresía vitalicia"}><InfinityIcon size={17} /></button>
-              <button disabled={busy === business.id} onClick={() => action(business, "extendTrial", `¿Extender 30 días la prueba de ${business.name}?`)} title="Extender prueba 30 días"><Clock3 size={17} /></button>
-              <button disabled={busy === business.id} onClick={() => action(business, "toggleSuspended", business.status === "suspended" ? `¿Reactivar ${business.name}?` : `¿Suspender ${business.name}?`)} title={business.status === "suspended" ? "Reactivar negocio" : "Suspender negocio"}>{business.status === "suspended" ? <PlayCircle size={17} /> : <PauseCircle size={17} /></button>
-              <a href={`https://${business.slug}.tupedido360.co`} target="_blank" rel="noreferrer" title="Abrir menú público"><ExternalLink size={17} /></a>
+              <button disabled={busy === business.id} onClick={() => action(business, "toggleLifetime", business.isLifetime ? ("Quitar la membresía vitalicia de " + business.name + "?") : ("Dar membresía vitalicia a " + business.name + "?"))} title={business.isLifetime ? "Quitar membresía vitalicia" : "Dar membresía vitalicia"}><InfinityIcon size={17} /></button>
+              <button disabled={busy === business.id} onClick={() => action(business, "extendTrial", "Extender 30 días la prueba de " + business.name + "?")} title="Extender prueba 30 días"><Clock3 size={17} /></button>
+              <button disabled={busy === business.id} onClick={() => action(business, "toggleSuspended", business.status === "suspended" ? ("Reactivar " + business.name + "?") : ("Suspender " + business.name + "?"))} title={business.status === "suspended" ? "Reactivar negocio" : "Suspender negocio"}>{business.status === "suspended" ? <PlayCircle size={17} /> : <PauseCircle size={17} /></button>
+              <a href={"https://" + business.slug + ".tupedido360.co"} target="_blank" rel="noreferrer" title="Abrir menú público"><ExternalLink size={17} /></a>
             </div>
           </article>
         ))}
