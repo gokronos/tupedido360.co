@@ -45,12 +45,14 @@ export async function ensureSchema() {
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
+        username TEXT UNIQUE,
         email TEXT NOT NULL UNIQUE,
         phone TEXT NOT NULL,
         password_hash TEXT NOT NULL,
         platform_role TEXT NOT NULL DEFAULT 'user' CHECK (platform_role IN ('user', 'support', 'superadmin')),
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE`;
     await sql`
       CREATE TABLE IF NOT EXISTS business_members (
         business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
@@ -66,6 +68,7 @@ export async function ensureSchema() {
         business_id UUID NOT NULL UNIQUE REFERENCES businesses(id) ON DELETE CASCADE,
         status TEXT NOT NULL DEFAULT 'trialing' CHECK (status IN ('trialing', 'active', 'past_due', 'cancelled')),
         monthly_price_cop INTEGER NOT NULL DEFAULT 30000,
+        is_lifetime BOOLEAN NOT NULL DEFAULT false,
         trial_ends_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '30 days'),
         current_period_ends_at TIMESTAMPTZ,
         payment_provider TEXT,
@@ -74,6 +77,8 @@ export async function ensureSchema() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
+    await sql`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS is_lifetime BOOLEAN NOT NULL DEFAULT false`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users(lower(username)) WHERE username IS NOT NULL`;
     await sql`
       CREATE TABLE IF NOT EXISTS categories (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

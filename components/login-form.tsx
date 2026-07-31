@@ -18,7 +18,7 @@ export function LoginForm() {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
+      body: JSON.stringify({ login: form.get("login"), password: form.get("password") }),
     });
     const result = await response.json();
     if (!response.ok) {
@@ -32,7 +32,7 @@ export function LoginForm() {
 
   return (
     <form className="login-form" onSubmit={submit}>
-      <label><span>Correo electrónico</span><input name="email" type="email" autoComplete="email" required placeholder="nombre@correo.com" /></label>
+      <label><span>Usuario o correo</span><input name="login" type="text" autoComplete="username" required placeholder="Tu usuario o correo" /></label>
       <label>
         <span>Contraseña</span>
         <div className="password-input">

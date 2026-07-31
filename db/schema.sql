@@ -21,6 +21,7 @@ CREATE TABLE businesses (
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
+  username TEXT UNIQUE,
   email TEXT NOT NULL UNIQUE,
   phone TEXT NOT NULL,
   password_hash TEXT NOT NULL,
@@ -42,6 +43,7 @@ CREATE TABLE subscriptions (
   business_id UUID NOT NULL UNIQUE REFERENCES businesses(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'trialing' CHECK (status IN ('trialing', 'active', 'past_due', 'cancelled')),
   monthly_price_cop INTEGER NOT NULL DEFAULT 30000,
+  is_lifetime BOOLEAN NOT NULL DEFAULT false,
   trial_ends_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '30 days'),
   current_period_ends_at TIMESTAMPTZ,
   payment_provider TEXT,
@@ -124,6 +126,7 @@ CREATE TABLE order_items (
 );
 
 CREATE INDEX business_members_user_idx ON business_members(user_id);
+CREATE UNIQUE INDEX users_username_lower_idx ON users(lower(username)) WHERE username IS NOT NULL;
 CREATE INDEX subscriptions_status_idx ON subscriptions(status);
 CREATE INDEX categories_business_idx ON categories(business_id, sort_order);
 CREATE INDEX products_business_idx ON products(business_id, category_id);
