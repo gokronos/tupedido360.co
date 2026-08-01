@@ -1,5 +1,5 @@
 "use client";
-import { CheckCircle2, CreditCard, Sparkles, Zap } from "lucide-react";
+import { CheckCircle2, CreditCard, Sparkles, X, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Subscription = {
@@ -25,6 +25,7 @@ export function SubscriptionManager() {
   const [data, setData] = useState<Subscription | null>(null);
   const [payingPlan, setPayingPlan] = useState<string | null>(null);
   const [payError, setPayError] = useState("");
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -63,7 +64,7 @@ export function SubscriptionManager() {
       }
 
       if (res.ok && checkoutData.initPoint) {
-        window.location.href = String(checkoutData.initPoint);
+        setCheckoutUrl(String(checkoutData.initPoint));
         return;
       }
 
@@ -153,6 +154,20 @@ export function SubscriptionManager() {
           <p className="subscription-support" style={{ marginTop: "1rem" }}>
             Pagos procesados de forma 100% segura con Mercado Pago (PSE, Nequi, Tarjetas) o mediante activación directa de administración.
           </p>
+        </div>
+      )}
+
+      {checkoutUrl && (
+        <div className="editor-backdrop" style={{ zIndex: 99999, backgroundColor: "rgba(0,0,0,0.75)" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setCheckoutUrl(null); }}>
+          <div style={{ backgroundColor: "#1e293b", width: "100%", maxWidth: "560px", height: "88vh", maxHeight: "720px", borderRadius: "16px", overflow: "hidden", position: "relative", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7)", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.8rem 1.2rem", background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}>
+              <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>Pago Seguro con Mercado Pago (PSE / Nequi)</span>
+              <button onClick={() => setCheckoutUrl(null)} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "none", borderRadius: "50%", width: "30px", height: "30px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={18} />
+              </button>
+            </div>
+            <iframe src={checkoutUrl} style={{ width: "100%", height: "100%", border: "none", backgroundColor: "#fff" }} title="Mercado Pago Checkout" />
+          </div>
         </div>
       )}
     </div>
