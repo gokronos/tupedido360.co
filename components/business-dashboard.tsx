@@ -11,7 +11,8 @@ import { WaiterDashboard } from "@/components/waiter-dashboard";
 import { SettingsManager } from "@/components/settings-manager";
 import { SalesHistory } from "@/components/sales-history";
 import { DesignManager } from "@/components/design-manager";
-import {SubscriptionManager} from "@/components/subscription-manager";
+import { SubscriptionManager } from "@/components/subscription-manager";
+import { PushNotificationRegistrar } from "@/components/push-notification-registrar";
 
 const navigation = [
   { id: "summary", label: "Resumen", icon: LayoutDashboard },
@@ -66,6 +67,7 @@ function Summary({ session, onProducts,onSettings }: { session: AppSession; onPr
   const money=(value:number)=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(value);
   const metrics=data?.metrics;
   return <>
+    <PushNotificationRegistrar />
     <div className="trial-banner"><div><CreditCard size={21} /><span><strong>{data?.subscription?.isLifetime?"Membresía vitalicia":data?.subscription?.status==="trialing"?"Periodo de prueba activo":"Suscripción mensual"}</strong><small>{data?.subscription?.isLifetime?"Sin pagos mensuales.":data?.subscription?.status==="trialing"?`Finaliza el ${new Date(data.subscription.trialEndsAt).toLocaleDateString("es-CO")}`:`Plan de ${money(data?.subscription?.monthlyPriceCop??30000)} al mes`}</small></span></div><button onClick={onSettings}>Ver suscripción</button></div>
     <div className="panel-section-title"><div><h2>Resumen de hoy</h2><p>La actividad de tu negocio aparecerá aquí.</p></div><a href={`https://${session.businessSlug}.tupedido360.co`} target="_blank" rel="noreferrer">Ver tienda <ExternalLink size={16} /></a></div>
     <div className="metric-grid">

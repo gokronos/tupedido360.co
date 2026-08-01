@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ensureSchema } from "@/db/client";
 import { customerCookie, customerToken, currentCustomer } from "@/lib/customer-session";
+import { broadcastNewOrderNotification } from "@/lib/push-notifications";
 import {rateLimit,requestIp} from "@/lib/rate-limit";
 
 type OrderBody = { slug?: string; orderType?: string; customerName?: string; customerPhone?: string; deliveryAddress?: string; neighborhood?: string; addressReference?: string; paymentMethod?: string; notes?: string; items?: Array<{ productId?: string; quantity?: number }> };
@@ -82,6 +83,15 @@ export async function POST(request: Request) {
     }
     return { reference: String(created.reference), customerId: String(customer.id) };
   });
+
+  broadcastNewOrderNotification(String(business.id), {
+    id: String(order.reference),
+    orderNumber: String(order.reference),
+    customerName,
+    totalCop,
+    orderType: validOrderType,
+  }).catch(() => null);
+
   const previous = await currentCustomer(slug);
   const issuedAt = previous?.businessId === String(business.id) && previous.customerId === order.customerId ? previous.issuedAt : Date.now() - 60_000;
   const response = NextResponse.json({ ok: true, reference: order.reference, totalCop, packagingTotalCop }, { status: 201 });

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TuPedido360</string>
+    <string name="title_activity_main">TuPedido360</string>
+    <string name="package_name">co.tupedido360.app</string>
+    <string name="custom_url_scheme">co.tupedido360.app</string>
+</resources>
