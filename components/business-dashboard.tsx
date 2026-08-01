@@ -41,6 +41,17 @@ export function BusinessDashboard({ session }: { session: AppSession }) {
         <form action="/api/auth/logout" method="post"><button className="logout-button" title="Cerrar sesión"><LogOut size={19} />Cerrar sesión</button></form>
       </aside>
       <section className="dashboard-main">
+        <div className="mobile-brand-bar">
+          <div className="dashboard-brand" style={{ padding: 0, margin: 0 }}>
+            <span><Store size={20} /></span>
+            <div>TuPedido360<small style={{ color: "#b8cbc2", fontSize: "11px" }}>{session.businessName}</small></div>
+          </div>
+          <form action="/api/auth/logout" method="post">
+            <button className="logout-button" title="Cerrar sesión" style={{ width: "36px", height: "36px", borderRadius: "8px", background: "rgba(255,255,255,0.1)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", border: "none" }}>
+              <LogOut size={16} />
+            </button>
+          </form>
+        </div>
         <header className="dashboard-header">
           <div><p>{session.role === "owner" ? "Panel del dueño" : session.role==="kitchen"?"Panel de cocina":"Panel del administrador"}</p><h1>{section === "products" ? "Productos" : section === "orders" ? "Pedidos" : section === "sales" ? "Historial y ventas" : section === "tables" ? "Mesas" : section === "team" ? "Equipo" : section === "design" ? "Diseño" : section==="subscription"?"Suscripción":section==="kitchen"?"Cocina" : section === "settings" ? "Configuración" : `Buenos días, ${session.name}`}</h1></div>
           <button className="icon-button" title="Notificaciones" aria-label="Notificaciones"><Bell size={20} /></button>
