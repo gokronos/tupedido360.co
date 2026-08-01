@@ -158,11 +158,14 @@ export function SubscriptionManager() {
       )}
 
       {checkoutUrl && (
-        <div className="editor-backdrop" style={{ zIndex: 99999, backgroundColor: "rgba(0,0,0,0.75)" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setCheckoutUrl(null); }}>
-          <div style={{ backgroundColor: "#1e293b", width: "100%", maxWidth: "560px", height: "88vh", maxHeight: "720px", borderRadius: "16px", overflow: "hidden", position: "relative", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7)", display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.8rem 1.2rem", background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}>
-              <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>Pago Seguro con Mercado Pago (PSE / Nequi)</span>
-              <button onClick={() => setCheckoutUrl(null)} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "none", borderRadius: "50%", width: "30px", height: "30px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 999999, backgroundColor: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(5px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }} onMouseDown={(e) => { if (e.target === e.currentTarget) setCheckoutUrl(null); }}>
+          <div style={{ backgroundColor: "#1e293b", width: "94%", maxWidth: "820px", height: "90vh", maxHeight: "840px", borderRadius: "16px", overflow: "hidden", border: "1px solid rgba(255,255,255,0.2)", boxShadow: "0 25px 60px -15px rgba(0,0,0,0.8)", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.85rem 1.25rem", background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#fff" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <CreditCard size={19} color="#10b981" />
+                <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>Pago Seguro · Mercado Pago (PSE, Nequi, Tarjeta)</span>
+              </div>
+              <button onClick={() => setCheckoutUrl(null)} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "none", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }}>
                 <X size={18} />
               </button>
             </div>
