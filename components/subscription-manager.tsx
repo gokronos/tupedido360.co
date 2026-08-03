@@ -71,7 +71,7 @@ export function SubscriptionManager() {
       if (checkoutData.setupRequired || res.status === 503) {
         // Fallback to WhatsApp if token not configured yet in Vercel
         const message = encodeURIComponent(`Hola TuPedido360, deseo activar el plan de suscripción *${planName}* (${money(price)}) para mi negocio *${data?.businessName || data?.businessSlug || "mi negocio"}* (${data?.businessSlug || "negocio"}.tupedido360.co).`);
-        window.open(`https://wa.me/573138866453?text=${message}`, "_blank");
+        window.open(`https://wa.me/573161096811?text=${message}`, "_blank");
         return;
       }
 

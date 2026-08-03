@@ -624,7 +624,7 @@ export function LandingPage() {
 
       <a
         className="landing-whatsapp"
-        href="https://wa.me/573138866453?text=Hola%2C%20quiero%20conocer%20TuPedido360%20para%20mi%20negocio."
+        href="https://wa.me/573161096811?text=Hola%2C%20quiero%20conocer%20TuPedido360%20para%20mi%20negocio."
         target="_blank"
         rel="noreferrer"
         aria-label="Hablar con TuPedido360 por WhatsApp"
