@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(__file__).resolve().parent
 ASSETS = ROOT / "assets"
 W, H, FPS = 540, 960, 24
-DURATION = 30
+DURATION = 38
 GREEN = "#071510"
 CARD = "#0d251d"
 MID = "#176b4d"
@@ -68,7 +68,7 @@ def brand(layer, top=38):
     draw.ellipse((48, top + 11, 64, top + 27), fill=LIME)
     draw.rectangle((46, top + 25, 66, top + 32), fill=LIME)
     draw.text((90, top + 6), "TuPedido360", font=font(23, True), fill=WHITE)
-    draw.text((91, top + 31), "TU NEGOCIO EN UN SOLO LUGAR", font=font(8, True), fill=MUTED)
+    draw.text((91, top + 31), "SU NEGOCIO EN UN SOLO LUGAR", font=font(8, True), fill=MUTED)
 
 
 def phone(layer, screenshot, box, offset=0):
@@ -96,17 +96,17 @@ def base():
 def scene_intro(local, duration):
     image = base(); layer = Image.new("RGBA", (W, H), (0, 0, 0, 0)); brand(layer)
     shift = int(24 * (1 - ease(local / .8)))
-    y = text_block(layer, "¿Tu negocio todavía recibe pedidos por mensajes sueltos?", 220 + shift, 38, WHITE, True, 460, spacing=9)
-    text_block(layer, "Pierdes tiempo, confundes pedidos y no sabes con claridad cuánto vendiste.", y + 22, 20, MUTED, False, 440, spacing=8)
+    y = text_block(layer, "¿Sus pedidos se pierden entre chats, llamadas y papeles?", 220 + shift, 38, WHITE, True, 460, spacing=9)
+    text_block(layer, "Cada pedido desordenado puede convertirse en tiempo perdido y clientes insatisfechos.", y + 22, 20, MUTED, False, 440, spacing=8)
     draw = ImageDraw.Draw(layer)
     draw.rounded_rectangle((67, 650, 473, 730), 18, fill="#102d23", outline="#315247", width=2)
-    draw.text((93, 674), "WhatsApp + papel + cuentas separadas", font=font(16, True), fill="#e5eee9")
+    draw.text((93, 674), "Chats + papel + cuentas separadas", font=font(16, True), fill="#e5eee9")
     layer.putalpha(int(255 * alpha_at(local, duration))); image.paste(layer, (0, 0), layer); return image
 
 
 def scene_solution(local, duration):
     image = base(); layer = Image.new("RGBA", (W, H), (0, 0, 0, 0)); brand(layer)
-    text_block(layer, "Ahora puedes tenerlo todo en un solo lugar", 170, 42, WHITE, True, 470, spacing=10)
+    text_block(layer, "Todo lo que su negocio necesita, en un solo lugar", 170, 42, WHITE, True, 470, spacing=10)
     draw = ImageDraw.Draw(layer)
     items = [("MENÚ WEB", "Tu propio enlace"), ("PEDIDOS QR", "Sin comisiones"), ("CONTROL", "Ventas e inventario")]
     for i, (title, subtitle) in enumerate(items):
@@ -121,16 +121,16 @@ def scene_solution(local, duration):
 
 def scene_menu(local, duration, menu):
     image = base(); layer = Image.new("RGBA", (W, H), (0, 0, 0, 0)); brand(layer, 24)
-    text_block(layer, "Tu menú profesional", 95, 35, WHITE, True)
-    text_block(layer, "El cliente entra desde un enlace o código QR", 145, 16, MUTED, width=440)
+    text_block(layer, "Una página web que sí vende", 82, 32, WHITE, True)
+    text_block(layer, "Sus clientes ven el menú y ordenan desde un enlace o código QR", 175, 16, MUTED, width=440)
     progress = ease(local / duration)
-    phone(layer, menu, (115, 205, 425, 900), int(progress * max(0, menu.height - 900)))
+    phone(layer, menu, (115, 235, 425, 910), int(progress * max(0, menu.height - 900)))
     layer.putalpha(int(255 * alpha_at(local, duration))); image.paste(layer, (0, 0), layer); return image
 
 
 def scene_order(local, duration):
     image = base(); layer = Image.new("RGBA", (W, H), (0, 0, 0, 0)); brand(layer)
-    text_block(layer, "El pedido llega claro y al instante", 145, 38, WHITE, True, 470)
+    text_block(layer, "Cada pedido llega claro y al instante", 145, 38, WHITE, True, 470)
     draw = ImageDraw.Draw(layer)
     y = 350 + int(22 * (1 - ease(local / .7)))
     draw.rounded_rectangle((42, y, 498, y + 330), 20, fill="#123c2d", outline=LIME, width=2)
@@ -148,13 +148,13 @@ def scene_order(local, duration):
 
 def scene_tools(local, duration):
     image = base(); layer = Image.new("RGBA", (W, H), (0, 0, 0, 0)); brand(layer)
-    text_block(layer, "6 herramientas incluidas", 145, 40, WHITE, True)
-    text_block(layer, "No pagues aplicaciones por separado", 255, 17, MUTED)
+    text_block(layer, "6 herramientas por una sola mensualidad", 115, 34, WHITE, True)
+    text_block(layer, "Deje de pagar aplicaciones por separado", 260, 17, MUTED)
     draw = ImageDraw.Draw(layer)
     tools = ["Página web", "Pedidos QR", "Panel de control", "Ventas y caja", "Mini inventario", "Equipo y cocina"]
     for i, item in enumerate(tools):
         col, row = i % 2, i // 2
-        x, y = 42 + col * 233, 335 + row * 142
+        x, y = 42 + col * 233, 345 + row * 142
         draw.rounded_rectangle((x, y, x + 215, y + 116), 15, fill=CARD, outline="#254d3d", width=2)
         draw.ellipse((x + 18, y + 17, x + 54, y + 53), fill=MID)
         draw.text((x + 29, y + 23), "✓", font=font(16, True), fill=LIME)
@@ -165,7 +165,7 @@ def scene_tools(local, duration):
 
 def scene_price(local, duration):
     image = base(); layer = Image.new("RGBA", (W, H), (0, 0, 0, 0)); brand(layer)
-    text_block(layer, "Todo tu negocio digital", 175, 38, WHITE, True)
+    text_block(layer, "Todo su negocio digital", 175, 38, WHITE, True)
     draw = ImageDraw.Draw(layer)
     pulse = 1 + .025 * math.sin(local * 5)
     bw, bh = int(440 * pulse), int(260 * pulse); x, y = (W - bw) // 2, 340 - (bh - 260) // 2
@@ -181,8 +181,8 @@ def scene_price(local, duration):
 
 def scene_final(local, duration):
     image = base(); layer = Image.new("RGBA", (W, H), (0, 0, 0, 0)); brand(layer, 85)
-    text_block(layer, "Dale a tu negocio el control que merece", 260, 42, WHITE, True, 470, spacing=10)
-    text_block(layer, "Empieza hoy con 30 días gratis", 445, 20, MUTED)
+    text_block(layer, "Dele a su negocio el control que merece", 260, 42, WHITE, True, 470, spacing=10)
+    text_block(layer, "Empiece hoy con 30 días gratis", 445, 20, MUTED)
     draw = ImageDraw.Draw(layer)
     draw.rounded_rectangle((53, 565, 487, 645), 18, fill=LIME)
     cta = "QUIERO DIGITALIZAR MI NEGOCIO"; bbox = draw.textbbox((0, 0), cta, font=font(16, True))
@@ -217,7 +217,7 @@ def main():
     output = ROOT / "tupedido360-vertical-v1.mp4"
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     command = [ffmpeg, "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-i", str(audio), "-vf", "scale=1080:1920:flags=lanczos", "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", str(output)]
-    scenes = [(0, 4, scene_intro), (4, 8, scene_solution), (8, 13, lambda l, d: scene_menu(l, d, menu)), (13, 17, scene_order), (17, 21, scene_tools), (21, 26, scene_price), (26, 30, scene_final)]
+    scenes = [(0, 5, scene_intro), (5, 10, scene_solution), (10, 16, lambda l, d: scene_menu(l, d, menu)), (16, 21, scene_order), (21, 27, scene_tools), (27, 33, scene_price), (33, 38, scene_final)]
     process = subprocess.Popen(command, stdin=subprocess.PIPE)
     assert process.stdin
     for frame in range(DURATION * FPS):
