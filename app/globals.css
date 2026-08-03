@@ -1708,6 +1708,35 @@ a { color:inherit; }
 .bundle-close span { color:#b9cec5; font-size:13px; }
 .bundle-close a { padding:12px 18px; display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:10px; background:#d6f35c; color:#071510; text-decoration:none; font-weight:900; white-space:nowrap; }
 
+.value-comparison { padding:90px 0; background:#091a14; }
+.comparison-layout { display:grid; grid-template-columns:.85fr 1.15fr; align-items:center; gap:60px; }
+.comparison-copy h2 { margin:8px 0 14px; color:#fff; font-size:clamp(28px,3.5vw,42px); line-height:1.12; }
+.comparison-copy>p { margin:0 0 24px; color:#94a3b8; line-height:1.65; }
+.daily-price { margin-bottom:22px; display:flex; align-items:center; gap:13px; }
+.daily-price strong { color:#d6f35c; font-size:30px; }
+.daily-price span { max-width:230px; color:#cbd5e1; font-size:13px; line-height:1.4; }
+.comparison-cta { padding:13px 19px; display:inline-flex; align-items:center; gap:7px; border-radius:10px; background:#176b4d; color:#fff; text-decoration:none; font-weight:900; }
+.comparison-card { overflow:hidden; border:1px solid rgba(255,255,255,.12); border-radius:18px; background:#0f291f; box-shadow:0 20px 45px rgba(0,0,0,.25); }
+.comparison-card header,.comparison-card>div,.comparison-card footer { padding:14px 19px; display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; }
+.comparison-card header { background:#143a2c; color:#94a3b8; font-size:12px; text-transform:uppercase; }
+.comparison-card header strong { color:#d6f35c; }
+.comparison-card>div { border-top:1px solid rgba(255,255,255,.07); color:#e2e8f0; font-size:14px; }
+.comparison-card>div b { display:flex; align-items:center; gap:5px; color:#10b981; font-size:12px; }
+.comparison-card footer { border-top:1px solid rgba(214,243,92,.25); background:#124031; color:#fff; }
+.comparison-card footer strong { color:#d6f35c; font-size:24px; }
+.comparison-card footer small { color:#b9cec5; font-size:11px; }
+
+.how-it-works { padding:90px 0; background:#071510; }
+.steps-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+.steps-grid article { position:relative; padding:28px; border:1px solid rgba(255,255,255,.09); border-radius:16px; background:#0d251d; }
+.steps-grid article>b { position:absolute; top:18px; right:20px; color:rgba(214,243,92,.25); font-size:38px; }
+.steps-grid article>svg { color:#d6f35c; }
+.steps-grid h3 { margin:18px 0 8px; color:#fff; font-size:19px; }
+.steps-grid p { margin:0; color:#94a3b8; font-size:14px; line-height:1.6; }
+.guided-setup { width:max-content; max-width:100%; margin:24px auto 0; padding:11px 16px; display:flex; align-items:center; gap:8px; border-radius:30px; background:rgba(214,243,92,.1); color:#d6f35c; font-size:13px; font-weight:800; }
+.landing-whatsapp { position:fixed; z-index:1000; right:22px; bottom:22px; padding:13px 17px; display:flex; align-items:center; gap:8px; border-radius:30px; background:#25d366; color:#062d17; text-decoration:none; font-weight:900; box-shadow:0 12px 30px rgba(0,0,0,.3); transition:transform .2s; }
+.landing-whatsapp:hover { transform:translateY(-2px); }
+
 /* RESPONSIVE LANDING MEDIA QUERIES */
 @media (max-width: 1024px) {
   .hero-container { grid-template-columns: 1fr; }
@@ -1718,6 +1747,7 @@ a { color:inherit; }
   .register-landing-wrap { grid-template-columns: 1fr; }
   .footer-content { grid-template-columns: repeat(2, 1fr); }
   .bundle-grid { grid-template-columns:repeat(2,1fr); }
+  .comparison-layout { grid-template-columns:1fr; gap:35px; }
 }
 
 @media (max-width: 768px) {
@@ -1729,6 +1759,11 @@ a { color:inherit; }
   .bundle-grid { grid-template-columns:1fr; }
   .bundle-grid article { min-height:0; }
   .bundle-close { align-items:stretch; flex-direction:column; }
+  .steps-grid { grid-template-columns:1fr; }
+  .comparison-card header,.comparison-card>div,.comparison-card footer { padding:13px 14px; }
+  .comparison-card>div { font-size:12px; }
+  .landing-whatsapp { right:14px; bottom:14px; width:50px; height:50px; padding:0; justify-content:center; }
+  .landing-whatsapp span { display:none; }
 }
 
 .sales-table article > b.cancelled { color:#a62920; }

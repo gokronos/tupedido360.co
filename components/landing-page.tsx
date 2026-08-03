@@ -14,6 +14,7 @@ import {
   Flame,
   Globe,
   LayoutDashboard,
+  MessageCircle,
   PackageCheck,
   QrCode,
   Rocket,
@@ -193,6 +194,46 @@ export function LandingPage() {
             <div><strong>Todo esto vale menos que un café al día.</strong><span>Sin comisión por venta y sin permanencia.</span></div>
             <a href="#registro">Empezar gratis <ArrowRight size={17} /></a>
           </div>
+        </div>
+      </section>
+
+      <section className="value-comparison">
+        <div className="container comparison-layout">
+          <div className="comparison-copy">
+            <span className="section-tag">NO PAGUES TODO POR SEPARADO</span>
+            <h2>Seis herramientas, una sola mensualidad</h2>
+            <p>Una página web, un sistema de pedidos y herramientas para administrar tu negocio normalmente implican diferentes proveedores, pagos y contraseñas. Aquí trabajan juntas desde el primer día.</p>
+            <div className="daily-price"><strong>≈ $1.000</strong><span>por día para digitalizar y controlar tu negocio</span></div>
+            <a href="#registro" className="comparison-cta">Quiero digitalizar mi negocio <ArrowRight size={17} /></a>
+          </div>
+          <div className="comparison-card">
+            <header><span>Lo que necesitas</span><strong>Con TuPedido360</strong></header>
+            {[
+              "Página web y menú digital",
+              "Pedidos por QR, domicilio y recoger",
+              "Panel de administración",
+              "Control de ventas y caja",
+              "Mini inventario",
+              "Accesos para cocina y personal",
+            ].map(item => <div key={item}><span>{item}</span><b><CheckCircle2 size={17} /> Incluido</b></div>)}
+            <footer><span>Todo el sistema</span><strong>$30.000 <small>COP / mes</small></strong></footer>
+          </div>
+        </div>
+      </section>
+
+      <section className="how-it-works">
+        <div className="container">
+          <div className="section-header center">
+            <span className="section-tag">ASÍ DE FÁCIL FUNCIONA</span>
+            <h2>Del celular de tu cliente al control de tu negocio</h2>
+            <p>Sin aplicaciones obligatorias para tus clientes y sin procesos complicados para tu equipo.</p>
+          </div>
+          <div className="steps-grid">
+            <article><b>1</b><QrCode size={28} /><h3>Tu cliente entra</h3><p>Escanea el QR o abre tu enlace y ve el menú con tus productos, precios y fotografías.</p></article>
+            <article><b>2</b><BellRing size={28} /><h3>Recibes el pedido</h3><p>El pedido llega al panel del negocio con los productos, datos del cliente y forma de entrega.</p></article>
+            <article><b>3</b><BarChart3 size={28} /><h3>Tú mantienes el control</h3><p>Actualizas el estado, controlas existencias y consultas las ventas desde un solo lugar.</p></article>
+          </div>
+          <p className="guided-setup"><CheckCircle2 size={19} /> Te acompañamos para configurar tu negocio y publicar tu primer menú.</p>
         </div>
       </section>
 
@@ -580,6 +621,16 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <a
+        className="landing-whatsapp"
+        href="https://wa.me/573138866453?text=Hola%2C%20quiero%20conocer%20TuPedido360%20para%20mi%20negocio."
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Hablar con TuPedido360 por WhatsApp"
+      >
+        <MessageCircle size={24} /><span>¿Tienes dudas? Hablemos</span>
+      </a>
     </div>
   );
 }
