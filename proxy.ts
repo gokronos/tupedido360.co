@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isAllowedRequestOrigin, isUnsafeApiMutation } from "@/lib/request-security";
 
 const rootHosts = new Set(["tupedido360.co", "www.tupedido360.co", "localhost", "127.0.0.1"]);
 
 export function proxy(request: NextRequest) {
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)
-      && request.nextUrl.pathname.startsWith("/api/")
-      && request.nextUrl.pathname !== "/api/webhooks/mercadopago") {
-    const origin = request.headers.get("origin");
-    if (origin) {
-      try {
-        if (new URL(origin).host !== request.nextUrl.host) {
-          return NextResponse.json({ error: "Origen de solicitud no permitido." }, { status: 403 });
-        }
-      } catch {
-        return NextResponse.json({ error: "Origen de solicitud no permitido." }, { status: 403 });
-      }
-    }
+  if (isUnsafeApiMutation(request.method, request.nextUrl.pathname)
+      && !isAllowedRequestOrigin(request.headers.get("origin"), request.nextUrl.host)) {
+    return NextResponse.json({ error: "Origen de solicitud no permitido." }, { status: 403 });
   }
   const hostname = (request.headers.get("host") ?? "").split(":")[0].toLowerCase();
   if (!hostname || rootHosts.has(hostname) || hostname.endsWith(".vercel.app")) return NextResponse.next();

@@ -4,6 +4,7 @@ import { ensureSchema } from "@/db/client";
 import { customerCookie, customerToken, currentCustomer } from "@/lib/customer-session";
 import { broadcastNewOrderNotification } from "@/lib/push-notifications";
 import {rateLimit,requestIp} from "@/lib/rate-limit";
+import { parseOrderItems } from "@/lib/order-input";
 
 type OrderBody = { slug?: string; orderType?: string; customerName?: string; customerPhone?: string; deliveryAddress?: string; neighborhood?: string; addressReference?: string; paymentMethod?: string; notes?: string; items?: Array<{ productId?: string; quantity?: number }> };
 class InsufficientStockError extends Error {
@@ -26,17 +27,13 @@ export async function POST(request: Request) {
   const paymentMethod = ["cash", "transfer", "pay_at_store"].includes(body?.paymentMethod ?? "") ? body!.paymentMethod! : "cash";
   const notes = body?.notes?.trim().slice(0, 500) ?? "";
   if (!slug || slug.length > 63 || !validOrderType || !customerName || customerName.length < 3 || customerName.length > 100 ||
-      customerPhone.length < 10 || customerPhone.length > 15 || deliveryAddress.length > 200 || !body?.items?.length || body.items.length > 50) {
+      customerPhone.length < 10 || customerPhone.length > 15 || deliveryAddress.length > 200) {
     return NextResponse.json({ error: "Revisa los datos del pedido." }, { status: 400 });
   }
   if (validOrderType === "delivery" && (deliveryAddress.length < 5 || neighborhood.length < 2)) return NextResponse.json({ error: "Escribe la dirección y el barrio de entrega." }, { status: 400 });
-  const quantities = new Map<string, number>();
-  for (const item of body.items) {
-    const quantity = Number(item.quantity);
-    if (!item.productId || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) return NextResponse.json({ error: "Hay productos inválidos en el carrito." }, { status: 400 });
-    quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + quantity);
-    if ((quantities.get(item.productId) ?? 0) > 50) return NextResponse.json({ error: "La cantidad máxima por producto es 50." }, { status: 400 });
-  }
+  const parsedItems = parseOrderItems(body?.items);
+  if (!parsedItems.ok) return NextResponse.json({ error: parsedItems.reason === "quantity_limit" ? "La cantidad máxima por producto es 50." : "Hay productos inválidos en el carrito." }, { status: 400 });
+  const quantities = parsedItems.quantities;
 
   const sql = await ensureSchema();
   const [business] = await sql`SELECT b.id,b.accepting_orders,EXISTS(SELECT 1 FROM business_hours h WHERE h.business_id=b.id AND h.weekday=EXTRACT(ISODOW FROM timezone(b.timezone,now()))::int-1 AND h.enabled AND timezone(b.timezone,now())::time>=h.open_time AND timezone(b.timezone,now())::time<h.close_time) AS "openNow" FROM businesses b JOIN subscriptions s ON s.business_id=b.id WHERE b.slug=${slug} AND b.status IN ('trial','active') AND (s.is_lifetime OR (s.status='trialing' AND s.trial_ends_at>now()) OR (s.status='active' AND (s.current_period_ends_at IS NULL OR s.current_period_ends_at>now())))`;

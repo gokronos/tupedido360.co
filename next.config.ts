@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -9,6 +10,7 @@ const nextConfig: NextConfig = {
       "form-action 'self'",
       "object-src 'none'",
       "script-src 'self' 'unsafe-inline'",
+      "script-src-attr 'none'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
@@ -16,6 +18,7 @@ const nextConfig: NextConfig = {
       "frame-src https://*.mercadopago.com https://*.mercadopago.com.co",
       "worker-src 'self' blob:",
       "manifest-src 'self'",
+      "report-uri /api/csp-report",
       "upgrade-insecure-requests",
     ].join("; ");
     return [{
@@ -32,4 +35,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  webpack: { treeshake: { removeDebugLogging: true } },
+});

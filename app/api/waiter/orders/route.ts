@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ensureSchema } from "@/db/client";
 import { currentSession } from "@/lib/session";
+import { parseOrderItems } from "@/lib/order-input";
 
 class InsufficientStockError extends Error {
   constructor(public productName: string) { super("INSUFFICIENT_STOCK"); }
@@ -13,14 +14,10 @@ export async function POST(request: Request) {
   const businessId = session.businessId;
   const userId = session.userId;
   const body = await request.json().catch(() => null) as { tableId?: string; notes?: string; items?: Array<{ productId?: string; quantity?: number }> } | null;
-  if (!body?.tableId || !body.items?.length || body.items.length > 50) return NextResponse.json({ error: "Selecciona una mesa y agrega productos." }, { status: 400 });
-  const quantities = new Map<string, number>();
-  for (const item of body.items) {
-    const quantity = Number(item.quantity);
-    if (!item.productId || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) return NextResponse.json({ error: "El pedido contiene productos inválidos." }, { status: 400 });
-    quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + quantity);
-    if ((quantities.get(item.productId) ?? 0) > 50) return NextResponse.json({ error: "La cantidad máxima por producto es 50." }, { status: 400 });
-  }
+  if (!body?.tableId) return NextResponse.json({ error: "Selecciona una mesa y agrega productos." }, { status: 400 });
+  const parsedItems = parseOrderItems(body.items);
+  if (!parsedItems.ok) return NextResponse.json({ error: parsedItems.reason === "quantity_limit" ? "La cantidad máxima por producto es 50." : "El pedido contiene productos inválidos." }, { status: 400 });
+  const quantities = parsedItems.quantities;
   const sql = await ensureSchema();
   const[subscription]=await sql`SELECT 1 FROM subscriptions WHERE business_id=${businessId} AND (is_lifetime OR (status='trialing' AND trial_ends_at>now()) OR (status='active' AND (current_period_ends_at IS NULL OR current_period_ends_at>now())))`;
   if(!subscription)return NextResponse.json({error:"La suscripción del negocio no está activa."},{status:402});
