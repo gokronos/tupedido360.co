@@ -10,16 +10,14 @@ export function PushNotificationRegistrar() {
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
-      setPermission("unsupported");
       return;
     }
-
-    setPermission(Notification.permission);
 
     // Register Service Worker
     navigator.serviceWorker
       .register("/sw.js")
       .then(async (registration) => {
+        setPermission(Notification.permission);
         const sub = await registration.pushManager.getSubscription();
         if (sub) {
           setSubscribed(true);
@@ -37,7 +35,7 @@ export function PushNotificationRegistrar() {
       setPermission(res);
 
       if (res !== "granted") {
-        alert("Para escuchar y hacer vibrar el celular con nuevos pedidos, debes permitir las notificaciones.");
+        alert("Para recibir avisos de nuevos pedidos, debes permitir las notificaciones.");
         return;
       }
 
@@ -66,7 +64,7 @@ export function PushNotificationRegistrar() {
 
       setSubscribed(true);
       
-      // Test vibration and sound feedback
+      // Confirma la activación con vibración cuando el dispositivo la admite.
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate([200, 100, 200]);
       }
@@ -86,10 +84,10 @@ export function PushNotificationRegistrar() {
         {subscribed ? <Volume2 size={20} color="#10b981" /> : <BellOff size={20} color="#f59e0b" />}
         <div>
           <strong style={{ fontSize: "0.88rem", display: "block", color: subscribed ? "#10b981" : "#f59e0b" }}>
-            {subscribed ? "Alerta Sonora y Vibración Activa" : "Alertas en Celular Desactivadas"}
+            {subscribed ? "Notificaciones de pedidos activas" : "Alertas en celular desactivadas"}
           </strong>
           <small style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
-            {subscribed ? "El celular sonará y vibrará al llegar nuevos pedidos incluso con la app cerrada." : "Actívalas para que el celular suene y vibre al recibir un pedido."}
+            {subscribed ? "Recibirás un aviso del sistema cuando llegue un pedido, incluso con la app cerrada." : "Actívalas para recibir avisos de nuevos pedidos."}
           </small>
         </div>
       </div>

@@ -4,7 +4,11 @@ import { currentSession } from "@/lib/session";
 import { getVapidPublicKey } from "@/lib/push-notifications";
 
 export async function GET() {
-  return NextResponse.json({ publicKey: getVapidPublicKey() });
+  try {
+    return NextResponse.json({ publicKey: getVapidPublicKey() });
+  } catch {
+    return NextResponse.json({ error: "Las notificaciones todavía no están configuradas." }, { status: 503 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -14,10 +18,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No autenticado." }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null) as {
+      endpoint?: unknown;
+      keys?: { p256dh?: unknown; auth?: unknown };
+    } | null;
     const { endpoint, keys } = body || {};
 
-    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    if (typeof endpoint !== "string" || endpoint.length > 2048 ||
+        typeof keys?.p256dh !== "string" || keys.p256dh.length > 512 ||
+        typeof keys?.auth !== "string" || keys.auth.length > 512) {
       return NextResponse.json({ error: "Datos de suscripción push incompletos." }, { status: 400 });
     }
 
@@ -34,8 +43,11 @@ export async function POST(request: Request) {
     `;
 
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Push Subscribe Error]", error);
-    return NextResponse.json({ error: error?.message ?? "Error guardando suscripción push." }, { status: 500 });
+    const message = error instanceof Error && error.message === "VAPID_NOT_CONFIGURED"
+      ? "Las notificaciones todavía no están configuradas."
+      : "Error guardando suscripción push.";
+    return NextResponse.json({ error: message }, { status: error instanceof Error && error.message === "VAPID_NOT_CONFIGURED" ? 503 : 500 });
   }
 }

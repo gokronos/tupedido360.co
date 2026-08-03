@@ -1,6 +1,6 @@
 // Service Worker for TuPedido360 Background Push Notifications & Sound/Vibration Alerts
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
@@ -14,8 +14,7 @@ self.addEventListener("push", (event) => {
   let payload = {
     title: "🔔 NUEVO PEDIDO RECIBIDO",
     body: "¡Tienes un nuevo pedido en TuPedido360!",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
+    icon: "/icon.svg",
     tag: "new-order",
     url: "/panel",
     vibrate: [300, 100, 300, 100, 500, 100, 500],
@@ -23,14 +22,13 @@ self.addEventListener("push", (event) => {
 
   try {
     payload = { ...payload, ...event.data.json() };
-  } catch (e) {
+  } catch {
     payload.body = event.data.text();
   }
 
   const options = {
     body: payload.body,
-    icon: payload.icon || "/icon-192.png",
-    badge: payload.badge || "/icon-192.png",
+    icon: payload.icon || "/icon.svg",
     tag: payload.tag || "new-order",
     renotify: true,
     requireInteraction: true, // Keep notification visible until clicked/opened

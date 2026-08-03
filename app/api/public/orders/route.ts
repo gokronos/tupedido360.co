@@ -6,9 +6,12 @@ import { broadcastNewOrderNotification } from "@/lib/push-notifications";
 import {rateLimit,requestIp} from "@/lib/rate-limit";
 
 type OrderBody = { slug?: string; orderType?: string; customerName?: string; customerPhone?: string; deliveryAddress?: string; neighborhood?: string; addressReference?: string; paymentMethod?: string; notes?: string; items?: Array<{ productId?: string; quantity?: number }> };
+class InsufficientStockError extends Error {
+  constructor(public productName: string) { super("INSUFFICIENT_STOCK"); }
+}
 
 export async function POST(request: Request) {
-  if(!rateLimit(`public-order:${requestIp(request)}`,20,10*60_000))return NextResponse.json({error:"Se enviaron demasiados pedidos desde este dispositivo. Espera unos minutos."},{status:429});
+  if(!await rateLimit(`public-order:${requestIp(request)}`,20,10*60_000))return NextResponse.json({error:"Se enviaron demasiados pedidos desde este dispositivo. Espera unos minutos."},{status:429});
   const body = await request.json().catch(() => null) as OrderBody | null;
   const slug = body?.slug?.trim().toLowerCase();
   const orderType = body?.orderType;
@@ -53,11 +56,28 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
   }
-  const productsTotalCop = products.reduce((total, product) => total + Number(product.price_cop) * (quantities.get(String(product.id)) ?? 0), 0);
-  const packagingTotalCop = products.reduce((total, product) => total + Number(product.packaging_fee_cop) * (quantities.get(String(product.id)) ?? 0), 0);
-  const totalCop = productsTotalCop + packagingTotalCop;
+  let packagingTotalCop = 0;
+  let totalCop = 0;
   const reference = `TP-${randomBytes(4).toString("hex").toUpperCase()}`;
-  const order = await sql.begin(async (transaction) => {
+  let order: { reference: string; customerId: string };
+  try {
+    order = await sql.begin(async (transaction) => {
+    const lockedProducts = [];
+    for (const product of products) {
+      const quantity = quantities.get(String(product.id)) ?? 0;
+      const updated = await transaction`
+        UPDATE products
+        SET stock_quantity=CASE WHEN stock_quantity IS NULL THEN NULL ELSE stock_quantity-${quantity} END,
+            updated_at=now()
+        WHERE id=${product.id} AND business_id=${business.id} AND active=true
+          AND (stock_quantity IS NULL OR stock_quantity>=${quantity})
+        RETURNING id, name, price_cop, packaging_fee_cop`;
+      if (!updated.length) throw new InsufficientStockError(String(product.name));
+      lockedProducts.push(updated[0]);
+    }
+    const productsTotalCop = lockedProducts.reduce((total, product) => total + Number(product.price_cop) * (quantities.get(String(product.id)) ?? 0), 0);
+    packagingTotalCop = lockedProducts.reduce((total, product) => total + Number(product.packaging_fee_cop) * (quantities.get(String(product.id)) ?? 0), 0);
+    totalCop = productsTotalCop + packagingTotalCop;
     const [customer] = await transaction`
       INSERT INTO customers (business_id,name,whatsapp) VALUES (${business.id},${customerName},${customerPhone})
       ON CONFLICT (business_id,whatsapp) DO UPDATE SET name=EXCLUDED.name,updated_at=now() RETURNING id`;
@@ -70,19 +90,20 @@ export async function POST(request: Request) {
       VALUES (${business.id}, ${reference}, ${validOrderType}, ${customerName}, ${customerPhone}, ${deliveryAddress}, ${neighborhood}, ${addressReference},
         ${paymentMethod}, ${paymentMethod === "transfer" ? "pending_verification" : "pending"}, ${validOrderType === "delivery" ? "pending_quote" : "not_applicable"}, ${notes}, ${totalCop}, ${packagingTotalCop}, ${customer.id})
       RETURNING id, reference`;
-    for (const product of products) {
+    for (const product of lockedProducts) {
       const quantity = quantities.get(String(product.id)) ?? 0;
       await transaction`
         INSERT INTO order_items (order_id, product_id, product_name, unit_price_cop, quantity, subtotal_cop)
         VALUES (${created.id}, ${product.id}, ${product.name}, ${product.price_cop}, ${quantity}, ${Number(product.price_cop) * quantity})`;
-      if (product.stock_quantity !== null) {
-        await transaction`
-          UPDATE products SET stock_quantity = GREATEST(0, stock_quantity - ${quantity}), updated_at=now()
-          WHERE id=${product.id} AND stock_quantity IS NOT NULL`;
-      }
     }
     return { reference: String(created.reference), customerId: String(customer.id) };
-  });
+    });
+  } catch (error) {
+    if (error instanceof InsufficientStockError) {
+      return NextResponse.json({ error: `El producto "${error.productName}" cambió de disponibilidad. Actualiza el carrito.` }, { status: 409 });
+    }
+    throw error;
+  }
 
   broadcastNewOrderNotification(String(business.id), {
     id: String(order.reference),

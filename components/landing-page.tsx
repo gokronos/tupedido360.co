@@ -13,11 +13,6 @@ import {
   ExternalLink,
   Flame,
   Globe,
-  Layers,
-  Lock,
-  MessageCircle,
-  PackageCheck,
-  PhoneCall,
   QrCode,
   Rocket,
   ShieldCheck,
@@ -25,7 +20,6 @@ import {
   Store,
   Smartphone,
   TrendingUp,
-  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -85,7 +79,7 @@ export function LandingPage() {
           <div className="hero-content">
             <div className="hero-badge">
               <Flame size={16} color="#d6f35c" />
-              <span>El Software #1 de Pedidos y Menú Digital en Colombia</span>
+              <span>Pedidos, menú digital y operación en un solo lugar</span>
             </div>
 
             <h1 className="hero-title">
@@ -93,7 +87,7 @@ export function LandingPage() {
             </h1>
 
             <p className="hero-subtitle">
-              Gestiona domicilios, pedidos en mesa con código QR y retiro en local desde tu celular. Alertas sonoras de fondo, control de stock inteligente y pagos automáticos por PSE, Nequi y Tarjeta.
+              Gestiona domicilios, pedidos en mesa con código QR y retiro en local desde tu celular. Notificaciones push, control de stock y suscripciones procesadas por Mercado Pago.
             </p>
 
             <div className="hero-actions">
@@ -151,7 +145,7 @@ export function LandingPage() {
                     <BellRing size={20} className="bell-pulse" />
                     <div>
                       <strong>🔔 ¡NUEVO PEDIDO RECIBIDO! #ORD-8492</strong>
-                      <small>Celular suena y vibra en tiempo real</small>
+                      <small>Aviso push en tiempo real</small>
                     </div>
                   </div>
                   <div className="notif-details">
@@ -170,7 +164,7 @@ export function LandingPage() {
                 <div className="mockup-features-strip">
                   <div className="strip-item"><QrCode size={18} /> Código QR por Mesa</div>
                   <div className="strip-item"><Smartphone size={18} /> App Android Nativa</div>
-                  <div className="strip-item"><CreditCard size={18} /> PSE & Nequi Directo</div>
+                  <div className="strip-item"><CreditCard size={18} /> Suscripción con Mercado Pago</div>
                 </div>
               </div>
             </div>
@@ -192,13 +186,13 @@ export function LandingPage() {
               <QrCode size={18} /> Menú QR & Subdominio
             </button>
             <button className={activeTab === "alerts" ? "tab-btn active" : "tab-btn"} onClick={() => setActiveTab("alerts")}>
-              <BellRing size={18} /> Alertas Sonoras & Vibración
+              <BellRing size={18} /> Notificaciones Push
             </button>
             <button className={activeTab === "stock" ? "tab-btn active" : "tab-btn"} onClick={() => setActiveTab("stock")}>
               <Boxes size={18} /> Inventario & Stock
             </button>
             <button className={activeTab === "payments" ? "tab-btn active" : "tab-btn"} onClick={() => setActiveTab("payments")}>
-              <CreditCard size={18} /> Mercado Pago & PSE
+              <CreditCard size={18} /> Pago de Suscripción
             </button>
             <button className={activeTab === "kitchen" ? "tab-btn active" : "tab-btn"} onClick={() => setActiveTab("kitchen")}>
               <ChefHat size={18} /> Cocina & Meseros
@@ -230,19 +224,19 @@ export function LandingPage() {
             {activeTab === "alerts" && (
               <div className="tab-panel">
                 <div className="panel-text">
-                  <h3>Alertas Sonoras y Vibración Instantánea en tu Celular</h3>
-                  <p>¡No más pedidos perdidos! Tu celular Android o navegador sonará con un timbre fuerte y vibrará al segundo en que un cliente ordene, incluso con la aplicación cerrada o la pantalla bloqueada.</p>
+                  <h3>Notificaciones instantáneas en tu celular</h3>
+                  <p>Recibe una notificación del sistema cuando un cliente ordene, incluso con la aplicación cerrada, según las capacidades y permisos del dispositivo.</p>
                   <ul>
                     <li><CheckCircle2 size={18} color="#10b981" /> Servicio de Notificaciones Push nativas en segundo plano.</li>
-                    <li><CheckCircle2 size={18} color="#10b981" /> Timbre continuo hasta que abras o despaches la orden.</li>
+                    <li><CheckCircle2 size={18} color="#10b981" /> Aviso visible para abrir rápidamente el panel de pedidos.</li>
                     <li><CheckCircle2 size={18} color="#10b981" /> Funciona simultáneamente en múltiples dispositivos (Cocina, Meseros, Dueño).</li>
                   </ul>
                 </div>
                 <div className="panel-media">
                   <div className="alert-preview-box">
                     <BellRing size={64} className="bell-shake" color="#d6f35c" />
-                    <strong>Alerta Sonora Activa</strong>
-                    <p>🔔 ¡Celular suena y vibra fuerte al recibir un pedido!</p>
+                    <strong>Notificaciones activas</strong>
+                    <p>🔔 Recibe avisos de pedidos en tu dispositivo.</p>
                   </div>
                 </div>
               </div>
@@ -271,19 +265,19 @@ export function LandingPage() {
             {activeTab === "payments" && (
               <div className="tab-panel">
                 <div className="panel-text">
-                  <h3>Integración Directa con Mercado Pago Colombia</h3>
-                  <p>Acepta todos los medios de pago en Colombia de forma 100% segura mediante nuestra ventana flotante integrada sin sacar a tus clientes de la plataforma.</p>
+                  <h3>Renueva tu plan mediante Mercado Pago Colombia</h3>
+                  <p>El propietario puede pagar la suscripción de TuPedido360 desde el panel mediante el checkout de Mercado Pago.</p>
                   <ul>
-                    <li><CheckCircle2 size={18} color="#10b981" /> Pagos por PSE (Bancolombia, Davivienda, Nequi, Banco de Bogotá, etc.).</li>
-                    <li><CheckCircle2 size={18} color="#10b981" /> Nequi, Daviplata y Tarjetas de Crédito/Débito.</li>
-                    <li><CheckCircle2 size={18} color="#10b981" /> Renovación e ingresos recibidos directamente en tu cuenta.</li>
+                    <li><CheckCircle2 size={18} color="#10b981" /> Checkout administrado por Mercado Pago.</li>
+                    <li><CheckCircle2 size={18} color="#10b981" /> Validación segura e idempotente de la confirmación del pago.</li>
+                    <li><CheckCircle2 size={18} color="#10b981" /> Activación automática del periodo contratado al aprobarse el pago.</li>
                   </ul>
                 </div>
                 <div className="panel-media">
                   <div className="payment-preview-box">
                     <CreditCard size={56} color="#10b981" />
                     <strong>Mercado Pago Colombia</strong>
-                    <span>PSE · Nequi · Daviplata · Tarjetas</span>
+                    <span>Renovación segura del plan</span>
                   </div>
                 </div>
               </div>
@@ -343,8 +337,8 @@ export function LandingPage() {
 
             <article className="benefit-card">
               <div className="card-icon"><ShieldCheck size={28} /></div>
-              <h3>Sin Errores en Pedidos y Cocina</h3>
-              <p>Elimina las notas ilegibles en papel. Las comisiones ingresan de forma digital y clara a la cocina especificado cada ingrediente o nota especial.</p>
+              <h3>Pedidos Claros para Cocina</h3>
+              <p>Evita notas ilegibles en papel. Las comandas ingresan de forma digital y muestran claramente cada producto y nota especial.</p>
             </article>
 
             <article className="benefit-card">
@@ -355,8 +349,8 @@ export function LandingPage() {
 
             <article className="benefit-card">
               <div className="card-icon"><Smartphone size={28} /></div>
-              <h3>App APK Android Nativa Incluida</h3>
-              <p>Descarga la aplicación directamente en cualquier celular Android de tu negocio para recibir alertas instantáneas sin depender solo del navegador.</p>
+              <h3>Aplicación Android Incluida</h3>
+              <p>Descarga la aplicación Android para abrir el panel de TuPedido360 como una app en el celular de tu negocio.</p>
             </article>
           </div>
         </div>
@@ -369,10 +363,10 @@ export function LandingPage() {
             <div className="apk-banner-content">
               <span className="apk-tag">NUEVO · APK ANDROID NATIVA</span>
               <h2>Descarga la App de TuPedido360 Directamente en tu Celular</h2>
-              <p>Recibe notificaciones de pedidos con timbre sonoro y vibración fuerte, gestiona tus mesas y controla tu inventario desde una app ultra ligera de solo 4 MB.</p>
+              <p>Recibe notificaciones de pedidos, gestiona tus mesas y controla tu inventario desde la aplicación Android.</p>
               <div className="apk-banner-actions">
                 <a href="/TuPedido360.apk" download className="btn-apk-download">
-                  <Download size={20} /> Descargar APK Nativa (4.0 MB)
+                  <Download size={20} /> Descargar APK Android (15 MB)
                 </a>
                 <span className="apk-subnote">Compatible con Android 7.0 en adelante · Instalación instantánea</span>
               </div>
@@ -381,7 +375,7 @@ export function LandingPage() {
               <div className="mobile-phone-mockup">
                 <Smartphone size={80} color="#d6f35c" />
                 <strong>TuPedido360 App</strong>
-                <small>Alertas 24/7 en segundo plano</small>
+                <small>Notificaciones push en segundo plano</small>
               </div>
             </div>
           </div>
@@ -410,10 +404,10 @@ export function LandingPage() {
               </div>
               <ul className="plan-features">
                 <li><CheckCircle2 size={16} color="#10b981" /> Menú QR & Subdominio propio</li>
-                <li><CheckCircle2 size={16} color="#10b981" /> Alertas sonoras & Notificaciones Push</li>
+                <li><CheckCircle2 size={16} color="#10b981" /> Notificaciones Push de pedidos</li>
                 <li><CheckCircle2 size={16} color="#10b981" /> Control de Stock & Mini-inventario</li>
-                <li><CheckCircle2 size={16} color="#10b981" /> Pagos por PSE & Nequi integrados</li>
-                <li><CheckCircle2 size={16} color="#10b981" /> App APK Nativa Android</li>
+                <li><CheckCircle2 size={16} color="#10b981" /> Renovación del plan con Mercado Pago</li>
+                <li><CheckCircle2 size={16} color="#10b981" /> Aplicación APK para Android</li>
               </ul>
               <a href="#registro" className="btn-plan-action">Probar 30 Días Gratis</a>
             </div>
@@ -450,7 +444,7 @@ export function LandingPage() {
               <ul className="plan-features">
                 <li><CheckCircle2 size={16} color="#10b981" /> Todo lo del Plan 3 Meses</li>
                 <li><CheckCircle2 size={16} color="#10b981" /> Asesoría en configuración de menú</li>
-                <li><CheckCircle2 size={16} color="#10b981" /> Garantía de uptime 99.9%</li>
+                <li><CheckCircle2 size={16} color="#10b981" /> Prioridad en nuevas mejoras del producto</li>
               </ul>
               <a href="#registro" className="btn-plan-action">Probar 30 Días Gratis</a>
             </div>
@@ -469,7 +463,7 @@ export function LandingPage() {
               <ul className="plan-features">
                 <li><CheckCircle2 size={16} color="#d6f35c" /> Acceso completo sin restricciones</li>
                 <li><CheckCircle2 size={16} color="#d6f35c" /> Dominio y subdominio preferente</li>
-                <li><CheckCircle2 size={16} color="#d6f35c" /> Soporte personalizado VIP 24/7</li>
+                <li><CheckCircle2 size={16} color="#d6f35c" /> Soporte personalizado prioritario</li>
                 <li><CheckCircle2 size={16} color="#d6f35c" /> Todas las actualizaciones futuras incluidas</li>
               </ul>
               <a href="#registro" className="btn-plan-action featured">Comenzar Ahora con 30 Días Gratis</a>

@@ -56,6 +56,26 @@ CREATE TABLE subscriptions (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE subscription_checkouts (
+  id UUID PRIMARY KEY,
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  months INTEGER NOT NULL CHECK (months IN (1, 3, 6, 12)),
+  amount_cop INTEGER NOT NULL CHECK (amount_cop > 0),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'failed', 'processed')),
+  provider_preference_id TEXT,
+  provider_payment_id TEXT UNIQUE,
+  processed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE rate_limit_buckets (
+  bucket_key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL CHECK (count > 0),
+  reset_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
@@ -202,6 +222,7 @@ CREATE TABLE order_deletion_log (
 CREATE INDEX business_members_user_idx ON business_members(user_id);
 CREATE UNIQUE INDEX users_username_lower_idx ON users(lower(username)) WHERE username IS NOT NULL;
 CREATE INDEX subscriptions_status_idx ON subscriptions(status);
+CREATE INDEX subscription_checkouts_business_idx ON subscription_checkouts(business_id, created_at DESC);
 CREATE INDEX categories_business_idx ON categories(business_id, sort_order);
 CREATE INDEX products_business_idx ON products(business_id, category_id);
 CREATE INDEX media_assets_business_idx ON media_assets(business_id, created_at DESC);

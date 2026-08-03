@@ -5,7 +5,7 @@ import { createSessionToken, sessionCookie } from "@/lib/session";
 import {rateLimit,requestIp} from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
-  if(!rateLimit(`login:${requestIp(request)}`,10,15*60_000))return NextResponse.json({error:"Demasiados intentos. Espera 15 minutos."},{status:429});
+  if(!await rateLimit(`login:${requestIp(request)}`,10,15*60_000))return NextResponse.json({error:"Demasiados intentos. Espera 15 minutos."},{status:429});
   const body = await request.json().catch(() => null) as { login?: string; email?: string; password?: string; expectedSlug?: string } | null;
   const expectedEmail = process.env.DEMO_USER_EMAIL?.toLowerCase();
   const expectedPassword = process.env.DEMO_USER_PASSWORD;

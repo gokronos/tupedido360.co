@@ -84,6 +84,27 @@ export async function ensureSchema() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
     await sql`ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS is_lifetime BOOLEAN NOT NULL DEFAULT false`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS subscription_checkouts (
+        id UUID PRIMARY KEY,
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        months INTEGER NOT NULL CHECK (months IN (1, 3, 6, 12)),
+        amount_cop INTEGER NOT NULL CHECK (amount_cop > 0),
+        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'failed', 'processed')),
+        provider_preference_id TEXT,
+        provider_payment_id TEXT UNIQUE,
+        processed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`;
+    await sql`CREATE INDEX IF NOT EXISTS subscription_checkouts_business_idx ON subscription_checkouts(business_id, created_at DESC)`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+        bucket_key TEXT PRIMARY KEY,
+        count INTEGER NOT NULL CHECK (count > 0),
+        reset_at TIMESTAMPTZ NOT NULL
+      )`;
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users(lower(username)) WHERE username IS NOT NULL`;
     await sql`
       CREATE TABLE IF NOT EXISTS categories (

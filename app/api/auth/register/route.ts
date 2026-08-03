@@ -11,7 +11,7 @@ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const reservedSlugs = new Set(["www", "app", "api", "admin", "panel", "soporte", "support", "login", "ingresar"]);
 
 export async function POST(request: Request) {
-  if(!rateLimit(`register:${requestIp(request)}`,5,60*60_000))return NextResponse.json({error:"Demasiados registros. Intenta más tarde."},{status:429});
+  if(!await rateLimit(`register:${requestIp(request)}`,5,60*60_000))return NextResponse.json({error:"Demasiados registros. Intenta más tarde."},{status:429});
   const body = await request.json().catch(() => null) as Registration | null;
   const ownerName = body?.ownerName?.trim();
   const phone = body?.phone?.trim();

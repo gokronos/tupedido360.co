@@ -1,26 +1,23 @@
 import webpush from "web-push";
 import { ensureSchema } from "@/db/client";
 
-const DEFAULT_VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BI6wbC7hl3zPf71T60AHPyqwCQu4z8nxnDAY29OTGhZfAYirkD6F8S7cDtXcyJBx2aNQeN9lpC1g5mOlBZiKWfY";
-const DEFAULT_VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "gKTHSATfeWEkr_Rau4A1StHUQZOactUabrcSTW14ErE";
+function vapidKeys() {
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
+  const privateKey = process.env.VAPID_PRIVATE_KEY?.trim();
+  if (!publicKey || !privateKey) throw new Error("VAPID_NOT_CONFIGURED");
+  return { publicKey, privateKey };
+}
 
 let configured = false;
 function setupWebPush() {
   if (configured) return;
-  try {
-    webpush.setVapidDetails(
-      "mailto:soporte@tupedido360.co",
-      DEFAULT_VAPID_PUBLIC,
-      DEFAULT_VAPID_PRIVATE
-    );
-    configured = true;
-  } catch (err) {
-    console.error("[WebPush Setup Error]", err);
-  }
+  const { publicKey, privateKey } = vapidKeys();
+  webpush.setVapidDetails("mailto:soporte@tupedido360.co", publicKey, privateKey);
+  configured = true;
 }
 
 export function getVapidPublicKey() {
-  return DEFAULT_VAPID_PUBLIC;
+  return vapidKeys().publicKey;
 }
 
 export async function broadcastNewOrderNotification(businessId: string, orderData: {
@@ -46,10 +43,8 @@ export async function broadcastNewOrderNotification(businessId: string, orderDat
     const payload = JSON.stringify({
       title: `🔔 NUEVO PEDIDO #${orderData.orderNumber}`,
       body: `${orderData.customerName} - $${orderData.totalCop.toLocaleString("es-CO")} COP (${orderData.orderType === "table" ? `Mesa ${orderData.tableNumber || ""}` : orderData.orderType === "pickup" ? "Para Llevar" : "Domicilio"})`,
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      icon: "/icon.svg",
       tag: `order-${orderData.id}`,
-      sound: "/sounds/new-order.mp3",
       vibrate: [300, 100, 300, 100, 500, 100, 500],
       data: {
         url: `/panel`,
@@ -69,8 +64,11 @@ export async function broadcastNewOrderNotification(businessId: string, orderDat
 
       try {
         await webpush.sendNotification(pushSubscription, payload);
-      } catch (error: any) {
-        if (error?.statusCode === 404 || error?.statusCode === 410) {
+      } catch (error: unknown) {
+        const statusCode = typeof error === "object" && error && "statusCode" in error
+          ? Number(error.statusCode)
+          : null;
+        if (statusCode === 404 || statusCode === 410) {
           // Clean up invalid or expired subscription
           await sql`DELETE FROM push_subscriptions WHERE endpoint = ${sub.endpoint}`;
         }
