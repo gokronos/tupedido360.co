@@ -636,7 +636,7 @@ function CorrectionModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [itemId, setItemId] = useState(order.items[0]?.id ?? "");
+  const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState("");
   const [sending, setSending] = useState(false);
@@ -683,74 +683,91 @@ function CorrectionModal({
         <header>
           <div>
             <strong>
-              Corregir pedido · {order.tableName ?? order.reference}
+              {selected ? "Confirmar corrección" : "¿Qué producto desea quitar?"}
             </strong>
-            <span>Seleccione lo que se marcó por error.</span>
+            <span>
+              {order.tableName ?? order.reference} · Pedido {order.reference}
+            </span>
           </div>
           <button onClick={onClose} aria-label="Cerrar">
             <X size={20} />
           </button>
         </header>
-        <div className="correction-items">
-          {order.items.map((item) => (
+        {!selected ? (
+          <div className="correction-items">
+            <p>Toque el producto que fue marcado por error:</p>
+            {order.items.map((item) => (
+              <button
+                onClick={() => {
+                  setItemId(item.id);
+                  setQuantity(1);
+                  setError("");
+                }}
+                key={item.id}
+              >
+                <span>
+                  <strong>{item.productName}</strong>
+                  <small>
+                    El pedido tiene {item.quantity} · {money(item.unitPriceCop)} c/u
+                  </small>
+                </span>
+                <b>Quitar</b>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="correction-form">
             <button
-              className={item.id === itemId ? "selected" : ""}
+              className="correction-back"
               onClick={() => {
-                setItemId(item.id);
-                setQuantity(1);
+                setItemId("");
+                setReason("");
+                setError("");
               }}
-              key={item.id}
             >
-              <span>
-                <strong>{item.productName}</strong>
-                <small>
-                  {item.quantity} disponibles · {money(item.unitPriceCop)} c/u
-                </small>
-              </span>
-              <b>{item.id === itemId ? "Seleccionado" : "Elegir"}</b>
+              <ArrowLeft size={16} /> Elegir otro producto
             </button>
-          ))}
-        </div>
-        <div className="correction-form">
-          <label>
-            <span>Cantidad que desea retirar</span>
-            <div className="correction-quantity">
-              <button
-                onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-              >
-                <Minus size={17} />
-              </button>
-              <strong>{quantity}</strong>
-              <button
-                onClick={() =>
-                  setQuantity((value) =>
-                    Math.min(selected?.quantity ?? 1, value + 1),
-                  )
-                }
-              >
-                <Plus size={17} />
-              </button>
+            <div className="correction-selected-product">
+              <span>Producto que se retirará</span>
+              <strong>{selected.productName}</strong>
+              <small>Hay {selected.quantity} en este pedido</small>
             </div>
-          </label>
-          <label>
-            <span>Motivo de la corrección</span>
-            <textarea
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="Ejemplo: producto marcado por error"
-              rows={3}
-            />
-          </label>
-          {error && <p className="form-error">{error}</p>}
-          <button
-            className="save-correction"
-            disabled={sending || !selected}
-            onClick={save}
-          >
-            <RotateCcw size={17} />
-            {sending ? "Guardando..." : `Retirar ${quantity} y guardar`}
-          </button>
-        </div>
+            <label>
+              <span>¿Cuántas unidades desea quitar?</span>
+              <div className="correction-quantity">
+                <button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Disminuir cantidad">
+                  <Minus size={19} />
+                </button>
+                <strong>{quantity}</strong>
+                <button onClick={() => setQuantity((value) => Math.min(selected.quantity, value + 1))} aria-label="Aumentar cantidad">
+                  <Plus size={19} />
+                </button>
+              </div>
+            </label>
+            <fieldset className="correction-reasons">
+              <legend>¿Por qué se corrige?</legend>
+              {["Marcado por error", "El cliente cambió de opinión", "Producto no disponible"].map((option) => (
+                <button className={reason === option ? "selected" : ""} onClick={() => setReason(option)} key={option}>
+                  {option}
+                </button>
+              ))}
+            </fieldset>
+            <label>
+              <span>Otro motivo</span>
+              <textarea
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Escriba el motivo si no aparece arriba"
+                rows={2}
+              />
+            </label>
+            {error && <p className="form-error">{error}</p>}
+            <button className="save-correction" disabled={sending} onClick={save}>
+              <RotateCcw size={17} />
+              {sending ? "Guardando..." : `Confirmar: quitar ${quantity}`}
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
