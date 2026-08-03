@@ -43,6 +43,7 @@ export function WaiterDashboard({
   const [tableId, setTableId] = useState("");
   const [cart, setCart] = useState<Cart>({});
   const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
@@ -62,14 +63,25 @@ export function WaiterDashboard({
     const timer = setTimeout(() => void load(), 0);
     return () => clearTimeout(timer);
   }, [load]);
+  const categories = useMemo(() => {
+    const unique = new Map<string, string>();
+    products.forEach((product) => {
+      if (product.categoryId && product.categoryName)
+        unique.set(product.categoryId, product.categoryName);
+    });
+    return [...unique].map(([id, name]) => ({ id, name }));
+  }, [products]);
   const visible = useMemo(
     () =>
-      products.filter((product) =>
-        `${product.name} ${product.categoryName ?? ""}`
+      products.filter((product) => {
+        const matchesSearch = `${product.name} ${product.categoryName ?? ""}`
           .toLowerCase()
-          .includes(search.toLowerCase()),
-      ),
-    [products, search],
+          .includes(search.toLowerCase());
+        const matchesCategory =
+          categoryId === null || product.categoryId === categoryId;
+        return matchesSearch && matchesCategory;
+      }),
+    [products, search, categoryId],
   );
   const items = products
     .filter((product) => cart[product.id])
@@ -162,6 +174,28 @@ export function WaiterDashboard({
             </div>
           </label>
         </div>
+        {categories.length > 0 && (
+          <div
+            className="waiter-category-strip"
+            aria-label="Filtrar productos por categoría"
+          >
+            <button
+              className={categoryId === null ? "active" : ""}
+              onClick={() => setCategoryId(null)}
+            >
+              Todos
+            </button>
+            {categories.map((category) => (
+              <button
+                className={categoryId === category.id ? "active" : ""}
+                onClick={() => setCategoryId(category.id)}
+                key={category.id}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
+        )}
         {confirmation && (
           <div className="waiter-confirmation">
             <CheckCircle2 size={20} />
@@ -213,6 +247,11 @@ export function WaiterDashboard({
               )}
             </article>
           ))}
+          {!visible.length && (
+            <p className="waiter-products-empty">
+              No hay productos en esta categoría.
+            </p>
+          )}
         </div>
       </section>
       <aside className="waiter-cart">
