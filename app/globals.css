@@ -1771,7 +1771,8 @@ a { color:inherit; }
 .landing-whatsapp { position:fixed; z-index:1000; right:22px; bottom:22px; padding:13px 17px; display:flex; align-items:center; gap:8px; border-radius:30px; background:#25d366; color:#062d17; text-decoration:none; font-weight:900; box-shadow:0 12px 30px rgba(0,0,0,.3); transition:transform .2s; }
 .landing-whatsapp:hover { transform:translateY(-2px); }
 
-.play-app-auth { padding:22px 14px 34px; place-items:start center; background:radial-gradient(circle at 100% 0,rgba(214,243,92,.2),transparent 30%),radial-gradient(circle at 0 100%,rgba(73,190,132,.18),transparent 34%),#0b3324; }
+.play-app-auth { padding:22px 14px 34px; place-items:center; background:radial-gradient(circle at 100% 0,rgba(214,243,92,.2),transparent 30%),radial-gradient(circle at 0 100%,rgba(73,190,132,.18),transparent 34%),#0b3324; }
+.play-app-auth:has(.play-app-auth-box.registering) { place-items:start center; }
 .play-app-auth-box { position:relative; width:min(100%, 460px); overflow:hidden; padding:27px 28px 30px; border:1px solid rgba(255,255,255,.72); border-radius:24px; box-shadow:0 22px 55px rgba(2,24,15,.35); }
 .play-app-auth-box::before { content:""; position:absolute; inset:0 0 auto; height:5px; background:linear-gradient(90deg,#d6f35c,#65d68c); }
 .play-app-auth-box .auth-brand { width:max-content; padding:8px 12px 8px 9px; border-radius:11px; background:#eff8f3; color:#0e6b4b; font-size:18px; }
