@@ -63,18 +63,32 @@ export async function GET(request: Request) {
   if (!orders.length) return NextResponse.json({ orders: [] });
   const orderIds = orders.map((order) => order.id);
   const items = await auth.sql`
-    SELECT order_id AS "orderId", product_name AS "productName", unit_price_cop AS "unitPriceCop",
-      quantity, subtotal_cop AS "subtotalCop", added_at AS "addedAt", addition_round AS "additionRound"
-    FROM order_items WHERE order_id IN ${auth.sql(orderIds)} ORDER BY id`;
+    SELECT id,order_id AS "orderId",product_name AS "productName",unit_price_cop AS "unitPriceCop",
+      quantity-removed_quantity AS quantity,(quantity-removed_quantity)*unit_price_cop AS "subtotalCop",
+      added_at AS "addedAt",addition_round AS "additionRound"
+    FROM order_items WHERE order_id IN ${auth.sql(orderIds)} AND quantity>removed_quantity ORDER BY id`;
+  const corrections = await auth.sql`
+    SELECT order_id AS "orderId",product_name AS "productName",quantity,reason,
+      corrected_by_name AS "correctedByName",created_at AS "createdAt"
+    FROM order_item_corrections WHERE order_id IN ${auth.sql(orderIds)} ORDER BY created_at`;
   const grouped = new Map<string, Array<Record<string, unknown>>>();
   for (const item of items) {
     const id = String(item.orderId);
     grouped.set(id, [...(grouped.get(id) ?? []), item]);
   }
+  const groupedCorrections = new Map<string, Array<Record<string, unknown>>>();
+  for (const correction of corrections) {
+    const id = String(correction.orderId);
+    groupedCorrections.set(id, [
+      ...(groupedCorrections.get(id) ?? []),
+      correction,
+    ]);
+  }
   return NextResponse.json({
     orders: orders.map((order) => ({
       ...order,
       items: grouped.get(String(order.id)) ?? [],
+      corrections: groupedCorrections.get(String(order.id)) ?? [],
     })),
   });
 }
@@ -93,6 +107,8 @@ export async function POST(request: Request) {
     feeCop?: number;
     estimatedMinutes?: number;
     reason?: string;
+    itemId?: string;
+    quantity?: number;
   } | null;
   if (!body?.id)
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
@@ -158,6 +174,59 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     return NextResponse.json({ order });
+  }
+  if (body.action === "correctItem") {
+    if (
+      !auth.role ||
+      !["owner", "admin", "cashier"].includes(auth.role) ||
+      !auth.userId
+    )
+      return NextResponse.json(
+        { error: "No tiene permiso para corregir pedidos." },
+        { status: 403 },
+      );
+    const quantity = Math.round(Number(body.quantity));
+    const reason = body.reason?.trim().slice(0, 300) ?? "";
+    if (!body.itemId || !Number.isInteger(quantity) || quantity < 1)
+      return NextResponse.json(
+        { error: "Seleccione el producto y la cantidad que desea retirar." },
+        { status: 400 },
+      );
+    if (reason.length < 5)
+      return NextResponse.json(
+        { error: "Escriba el motivo de la corrección (mínimo 5 caracteres)." },
+        { status: 400 },
+      );
+    const itemId = body.itemId;
+    const orderId = body.id;
+    const actorId = auth.userId;
+    const actorName = auth.userName ?? "Usuario";
+    const corrected = await auth.sql.begin(async (transaction) => {
+      const [item] = await transaction`
+        SELECT oi.id,oi.order_id,oi.product_id,oi.product_name,oi.unit_price_cop,
+          oi.quantity-oi.removed_quantity AS available
+        FROM order_items oi JOIN orders o ON o.id=oi.order_id
+        WHERE oi.id=${itemId} AND o.id=${orderId} AND o.business_id=${auth.businessId}
+          AND o.deleted_at IS NULL AND o.status NOT IN ('delivered','cancelled') AND o.paid=false
+        FOR UPDATE OF oi,o`;
+      if (!item || Number(item.available) < quantity) return null;
+      const amountCop = Number(item.unit_price_cop) * quantity;
+      await transaction`UPDATE order_items SET removed_quantity=removed_quantity+${quantity} WHERE id=${item.id}`;
+      await transaction`UPDATE orders SET total_cop=GREATEST(0,total_cop-${amountCop}),updated_at=now() WHERE id=${orderId}`;
+      if (item.product_id)
+        await transaction`UPDATE products SET stock_quantity=CASE WHEN stock_quantity IS NULL THEN NULL ELSE stock_quantity+${quantity} END,updated_at=now() WHERE id=${item.product_id} AND business_id=${auth.businessId}`;
+      await transaction`INSERT INTO order_item_corrections(business_id,order_id,order_item_id,product_name,quantity,amount_cop,reason,corrected_by_user_id,corrected_by_name) VALUES(${auth.businessId},${orderId},${item.id},${item.product_name},${quantity},${amountCop},${reason},${actorId},${actorName})`;
+      return { amountCop };
+    });
+    if (!corrected)
+      return NextResponse.json(
+        {
+          error:
+            "No se puede corregir ese producto. Revise si el pedido ya fue pagado o cerrado.",
+        },
+        { status: 409 },
+      );
+    return NextResponse.json({ ok: true, corrected });
   }
   if (
     body.action === "updatePaymentStatus" &&

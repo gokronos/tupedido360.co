@@ -7,9 +7,12 @@ import {
   Clock3,
   Edit3,
   MapPin,
+  Minus,
   PackageCheck,
   Phone,
+  Plus,
   RefreshCw,
+  RotateCcw,
   ShoppingBag,
   Trash2,
   Truck,
@@ -30,12 +33,20 @@ type OrderStatus =
   | "delivered"
   | "cancelled";
 type OrderItem = {
+  id: string;
   productName: string;
   unitPriceCop: number;
   quantity: number;
   subtotalCop: number;
   addedAt?: string;
   additionRound?: number;
+};
+type OrderCorrection = {
+  productName: string;
+  quantity: number;
+  reason: string;
+  correctedByName: string;
+  createdAt: string;
 };
 type Order = {
   id: string;
@@ -53,10 +64,7 @@ type Order = {
   paymentStatus: "pending" | "pending_verification" | "verified";
   deliveryFeeCop: number | null;
   deliveryQuoteStatus:
-    | "not_applicable"
-    | "pending_quote"
-    | "quoted"
-    | "confirmed";
+    "not_applicable" | "pending_quote" | "quoted" | "confirmed";
   estimatedMinutes: number | null;
   totalCop: number;
   packagingTotalCop: number;
@@ -66,6 +74,7 @@ type Order = {
   tableName?: string;
   createdByName?: string;
   items: OrderItem[];
+  corrections: OrderCorrection[];
 };
 const money = (value: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -123,7 +132,11 @@ export function OrdersManager({
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [deletedView, setDeletedView] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-  useBackDismiss(Boolean(editingOrder), () => setEditingOrder(null));
+  const [correctingOrder, setCorrectingOrder] = useState<Order | null>(null);
+  useBackDismiss(Boolean(editingOrder || correctingOrder), () => {
+    setEditingOrder(null);
+    setCorrectingOrder(null);
+  });
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -240,6 +253,11 @@ export function OrdersManager({
                 role ?? "",
               )}
               onEdit={session ? () => setEditingOrder(order) : undefined}
+              onCorrect={
+                session && ["owner", "admin", "cashier"].includes(role ?? "")
+                  ? () => setCorrectingOrder(order)
+                  : undefined
+              }
               onAction={(payload) => action(payload, order.id)}
             />
           ))}
@@ -254,8 +272,8 @@ export function OrdersManager({
                   Adicionar productos · {editingOrder.tableName ?? "Mesa"}
                 </strong>
                 <span>
-                  Pedido {editingOrder.reference}. Busque y seleccione los nuevos
-                  productos.
+                  Pedido {editingOrder.reference}. Busque y seleccione los
+                  nuevos productos.
                 </span>
               </div>
               <button onClick={() => setEditingOrder(null)} aria-label="Cerrar">
@@ -277,6 +295,16 @@ export function OrdersManager({
           </section>
         </div>
       )}
+      {correctingOrder && (
+        <CorrectionModal
+          order={correctingOrder}
+          onClose={() => setCorrectingOrder(null)}
+          onSaved={() => {
+            void load(true);
+            setCorrectingOrder(null);
+          }}
+        />
+      )}
       <p className="orders-refresh-note">
         Actualización automática cada 8 segundos
         {lastUpdate
@@ -292,12 +320,14 @@ function OrderCard({
   busy,
   canManagePayment,
   onEdit,
+  onCorrect,
   onAction,
 }: {
   order: Order;
   busy: boolean;
   canManagePayment: boolean;
   onEdit?: () => void;
+  onCorrect?: () => void;
   onAction: (payload: Record<string, unknown>) => void;
 }) {
   const StatusIcon = statusInfo[order.status].icon;
@@ -479,10 +509,36 @@ function OrderCard({
         order.orderType === "dine_in" &&
         order.tableId &&
         !["delivered", "cancelled"].includes(order.status) && (
-          <button className="add-order-products" onClick={onEdit}>
-            <Edit3 size={17} /> Editar pedido
-          </button>
+          <div className="order-edit-actions">
+            <button className="add-order-products" onClick={onEdit}>
+              <Edit3 size={17} /> Adicionar productos
+            </button>
+            {onCorrect && !order.paid && (
+              <button className="correct-order-products" onClick={onCorrect}>
+                <RotateCcw size={17} /> Corregir pedido
+              </button>
+            )}
+          </div>
         )}
+      {order.corrections?.length > 0 && (
+        <div className="order-corrections">
+          {order.corrections.map((correction, index) => (
+            <p key={`${correction.createdAt}-${index}`}>
+              <strong>
+                Corrección: −{correction.quantity}x {correction.productName}
+              </strong>
+              <span>
+                {new Date(correction.createdAt).toLocaleTimeString("es-CO", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                · {correction.correctedByName}
+              </span>
+              <small>{correction.reason}</small>
+            </p>
+          ))}
+        </div>
+      )}
       <div
         className={`order-payment-box ${order.paid ? "is-paid" : "is-pending"}`}
       >
@@ -568,6 +624,135 @@ function OrderCard({
         </button>
       </footer>
     </article>
+  );
+}
+
+function CorrectionModal({
+  order,
+  onClose,
+  onSaved,
+}: {
+  order: Order;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [itemId, setItemId] = useState(order.items[0]?.id ?? "");
+  const [quantity, setQuantity] = useState(1);
+  const [reason, setReason] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const selected = order.items.find((item) => item.id === itemId);
+
+  async function save() {
+    if (!selected || reason.trim().length < 5) {
+      setError(
+        "Seleccione un producto y escriba el motivo (mínimo 5 caracteres).",
+      );
+      return;
+    }
+    setSending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "correctItem",
+          id: order.id,
+          itemId: selected.id,
+          quantity,
+          reason,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "No se pudo guardar la corrección.");
+        return;
+      }
+      onSaved();
+    } catch {
+      setError("No se pudo conectar para guardar la corrección.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="editor-backdrop correction-backdrop">
+      <section className="correction-modal">
+        <header>
+          <div>
+            <strong>
+              Corregir pedido · {order.tableName ?? order.reference}
+            </strong>
+            <span>Seleccione lo que se marcó por error.</span>
+          </div>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X size={20} />
+          </button>
+        </header>
+        <div className="correction-items">
+          {order.items.map((item) => (
+            <button
+              className={item.id === itemId ? "selected" : ""}
+              onClick={() => {
+                setItemId(item.id);
+                setQuantity(1);
+              }}
+              key={item.id}
+            >
+              <span>
+                <strong>{item.productName}</strong>
+                <small>
+                  {item.quantity} disponibles · {money(item.unitPriceCop)} c/u
+                </small>
+              </span>
+              <b>{item.id === itemId ? "Seleccionado" : "Elegir"}</b>
+            </button>
+          ))}
+        </div>
+        <div className="correction-form">
+          <label>
+            <span>Cantidad que desea retirar</span>
+            <div className="correction-quantity">
+              <button
+                onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+              >
+                <Minus size={17} />
+              </button>
+              <strong>{quantity}</strong>
+              <button
+                onClick={() =>
+                  setQuantity((value) =>
+                    Math.min(selected?.quantity ?? 1, value + 1),
+                  )
+                }
+              >
+                <Plus size={17} />
+              </button>
+            </div>
+          </label>
+          <label>
+            <span>Motivo de la corrección</span>
+            <textarea
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Ejemplo: producto marcado por error"
+              rows={3}
+            />
+          </label>
+          {error && <p className="form-error">{error}</p>}
+          <button
+            className="save-correction"
+            disabled={sending || !selected}
+            onClick={save}
+          >
+            <RotateCcw size={17} />
+            {sending ? "Guardando..." : `Retirar ${quantity} y guardar`}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 

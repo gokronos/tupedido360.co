@@ -278,6 +278,22 @@ export async function ensureSchema(options?: { migrate?: boolean }) {
       )`;
     await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS added_at TIMESTAMPTZ NOT NULL DEFAULT now()`;
     await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS addition_round INTEGER NOT NULL DEFAULT 0`;
+    await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS removed_quantity INTEGER NOT NULL DEFAULT 0`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS order_item_corrections (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        order_item_id UUID NOT NULL REFERENCES order_items(id) ON DELETE RESTRICT,
+        product_name TEXT NOT NULL,
+        quantity INTEGER NOT NULL CHECK (quantity > 0),
+        amount_cop INTEGER NOT NULL CHECK (amount_cop >= 0),
+        reason TEXT NOT NULL,
+        corrected_by_user_id UUID NOT NULL REFERENCES users(id),
+        corrected_by_name TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`;
+    await sql`CREATE INDEX IF NOT EXISTS order_item_corrections_order_idx ON order_item_corrections(order_id,created_at)`;
     await sql`
       CREATE TABLE IF NOT EXISTS order_deletion_log (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
