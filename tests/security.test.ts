@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { isAllowedRequestOrigin, isUnsafeApiMutation } from "../lib/request-security.ts";
 import { createSessionToken, readSessionToken } from "../lib/session.ts";
+import { shouldRewriteTenantPath } from "../lib/tenant-routing.ts";
 
 process.env.SESSION_SECRET = "test-secret-that-is-at-least-thirty-two-characters";
 
@@ -17,6 +18,15 @@ test("protects API mutations while allowing signed external reports", () => {
   assert.equal(isUnsafeApiMutation("GET", "/api/orders"), false);
   assert.equal(isUnsafeApiMutation("POST", "/api/webhooks/mercadopago"), false);
   assert.equal(isUnsafeApiMutation("POST", "/api/csp-report"), false);
+});
+
+test("keeps shared APIs and app assets at the root on tenant subdomains", () => {
+  assert.equal(shouldRewriteTenantPath("/admin"), true);
+  assert.equal(shouldRewriteTenantPath("/"), true);
+  assert.equal(shouldRewriteTenantPath("/api/auth/login"), false);
+  assert.equal(shouldRewriteTenantPath("/api/orders"), false);
+  assert.equal(shouldRewriteTenantPath("/manifest.json"), false);
+  assert.equal(shouldRewriteTenantPath("/icon.svg"), false);
 });
 
 test("session tokens reject tampering and expiration", () => {

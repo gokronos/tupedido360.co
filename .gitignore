@@ -24,6 +24,8 @@
 .DS_Store
 *.pem
 /.tools/
+/.signing/
+/TuPedido360-Play-*.aab
 
 # debug
 npm-debug.log*
