@@ -198,6 +198,7 @@ def soundtrack(path: Path):
     with wave.open(str(path), "wb") as wav:
         wav.setparams((2, 2, rate, DURATION * rate, "NONE", "not compressed"))
         chords = [(130.81, 164.81, 196.00), (146.83, 174.61, 220.00), (110.00, 138.59, 164.81), (98.00, 123.47, 146.83)]
+        melody = [392.00, 440.00, 493.88, 523.25, 493.88, 440.00, 392.00, 329.63]
         frames = bytearray()
         for i in range(DURATION * rate):
             t = i / rate; chord = chords[int(t / 2) % len(chords)]
@@ -205,8 +206,15 @@ def soundtrack(path: Path):
             beat_phase = t % .5
             beat = math.sin(2 * math.pi * 70 * t) * math.exp(-beat_phase * 18)
             shimmer = math.sin(2 * math.pi * chord[2] * 2 * t) * .12
+            note_phase = t % .5
+            note = math.sin(2 * math.pi * melody[int(t / .5) % len(melody)] * t) * math.exp(-note_phase * 5)
+            clap_phase = t % 1
+            clap = math.sin(2 * math.pi * 950 * t) * math.exp(-clap_phase * 35) if clap_phase < .08 else 0
+            notification = 0
+            if 16 <= t < 16.45:
+                notification = math.sin(2 * math.pi * (880 if t < 16.2 else 1174.66) * t) * .22
             fade = min(1, t / 1.2, (DURATION - t) / 1.5)
-            sample = int(max(-1, min(1, (pad * .16 + beat * .12 + shimmer * .05) * fade)) * 32767)
+            sample = int(max(-1, min(1, (pad * .22 + beat * .18 + shimmer * .07 + note * .11 + clap * .035 + notification) * fade)) * 32767)
             frames += sample.to_bytes(2, "little", signed=True) * 2
         wav.writeframes(frames)
 

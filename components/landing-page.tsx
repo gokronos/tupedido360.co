@@ -175,6 +175,29 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section className="promo-video-section">
+        <div className="container promo-video-layout">
+          <div className="promo-video-copy">
+            <span className="section-tag">CONOZCA TUPEDIDO360 EN 38 SEGUNDOS</span>
+            <h2>Vea todo lo que puede hacer por su negocio</h2>
+            <p>Menú web, pedidos por QR, ventas, caja, inventario y gestión del equipo en una sola plataforma.</p>
+            <span className="video-sound-note">🔊 Active el sonido para disfrutar el video completo.</span>
+          </div>
+          <div className="promo-video-frame">
+            <video
+              controls
+              playsInline
+              preload="metadata"
+              poster="/videos/tupedido360-vertical-poster.jpg"
+              aria-label="Video promocional vertical de TuPedido360"
+            >
+              <source src="/videos/tupedido360-vertical.mp4" type="video/mp4" />
+              Su navegador no permite reproducir este video.
+            </video>
+          </div>
+        </div>
+      </section>
+
       <section id="incluye" className="solution-bundle">
         <div className="container">
           <div className="bundle-heading">
