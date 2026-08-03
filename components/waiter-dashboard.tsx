@@ -18,6 +18,7 @@ type Product = {
   description: string;
   priceCop: number;
   icon: string;
+  imageUrl: string;
   categoryId: string | null;
   categoryName: string | null;
 };
@@ -29,7 +30,13 @@ const money = (value: number) =>
     currency: "COP",
     maximumFractionDigits: 0,
   }).format(value);
-export function WaiterDashboard({ session, embedded = false }: { session: AppSession; embedded?: boolean }) {
+export function WaiterDashboard({
+  session,
+  embedded = false,
+}: {
+  session: AppSession;
+  embedded?: boolean;
+}) {
   const [products, setProducts] = useState<Product[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [tableId, setTableId] = useState("");
@@ -108,22 +115,24 @@ export function WaiterDashboard({ session, embedded = false }: { session: AppSes
   }
   return (
     <main className={`waiter-shell${embedded ? " waiter-embedded" : ""}`}>
-      {!embedded && <header>
-        <div className="waiter-brand">
-          <span>
-            <UtensilsCrossed size={21} />
-          </span>
-          <div>
-            <strong>{session.businessName}</strong>
-            <small>Mesero · {session.name}</small>
+      {!embedded && (
+        <header>
+          <div className="waiter-brand">
+            <span>
+              <UtensilsCrossed size={21} />
+            </span>
+            <div>
+              <strong>{session.businessName}</strong>
+              <small>Mesero · {session.name}</small>
+            </div>
           </div>
-        </div>
-        <form action="/api/auth/logout" method="post">
-          <button title="Cerrar sesión">
-            <LogOut size={19} />
-          </button>
-        </form>
-      </header>}
+          <form action="/api/auth/logout" method="post">
+            <button title="Cerrar sesión">
+              <LogOut size={19} />
+            </button>
+          </form>
+        </header>
+      )}
       <section className="waiter-main">
         <div className="waiter-top">
           <label>
@@ -163,10 +172,17 @@ export function WaiterDashboard({ session, embedded = false }: { session: AppSes
         <div className="waiter-products">
           {visible.map((product) => (
             <article key={product.id}>
-              <span className="waiter-product-icon">
-                {product.icon || "🍽️"}
+              <span
+                className={`waiter-product-icon${product.imageUrl ? " has-image" : ""}`}
+                style={
+                  product.imageUrl
+                    ? { backgroundImage: `url(${product.imageUrl})` }
+                    : undefined
+                }
+              >
+                {!product.imageUrl && (product.icon || "🍽️")}
               </span>
-              <div>
+              <div className="waiter-product-copy">
                 <small>{product.categoryName ?? "Sin categoría"}</small>
                 <strong>{product.name}</strong>
                 <span>{money(product.priceCop)}</span>
