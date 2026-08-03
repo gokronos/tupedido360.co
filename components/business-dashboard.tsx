@@ -279,7 +279,7 @@ function Summary({
   const metrics = data?.metrics;
   return (
     <>
-      <PushNotificationRegistrar />
+      <PushNotificationRegistrar enabled={!playApp} />
       <div className="trial-banner">
         <div>
           <CreditCard size={21} />

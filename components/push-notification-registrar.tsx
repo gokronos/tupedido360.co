@@ -3,13 +3,24 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff, Volume2 } from "lucide-react";
 
-export function PushNotificationRegistrar() {
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
+export function PushNotificationRegistrar({
+  enabled = true,
+}: {
+  enabled?: boolean;
+}) {
+  const [permission, setPermission] = useState<
+    NotificationPermission | "unsupported"
+  >("default");
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (
+      !enabled ||
+      typeof window === "undefined" ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
       return;
     }
 
@@ -24,7 +35,7 @@ export function PushNotificationRegistrar() {
         }
       })
       .catch((err) => console.error("[SW Register Error]", err));
-  }, []);
+  }, [enabled]);
 
   async function enableNotifications() {
     if (permission === "unsupported") return;
@@ -35,7 +46,9 @@ export function PushNotificationRegistrar() {
       setPermission(res);
 
       if (res !== "granted") {
-        alert("Para recibir avisos de nuevos pedidos, debes permitir las notificaciones.");
+        alert(
+          "Para recibir avisos de nuevos pedidos, debes permitir las notificaciones.",
+        );
         return;
       }
 
@@ -63,7 +76,7 @@ export function PushNotificationRegistrar() {
       });
 
       setSubscribed(true);
-      
+
       // Confirma la activación con vibración cuando el dispositivo la admite.
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         navigator.vibrate([200, 100, 200]);
@@ -76,18 +89,46 @@ export function PushNotificationRegistrar() {
     }
   }
 
-  if (permission === "unsupported") return null;
+  if (!enabled || permission === "unsupported") return null;
 
   return (
-    <div style={{ padding: "0.6rem 1rem", background: subscribed ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.15)", border: `1px solid ${subscribed ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.4)"}`, borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", margin: "0.8rem 0" }}>
+    <div
+      style={{
+        padding: "0.6rem 1rem",
+        background: subscribed
+          ? "rgba(16, 185, 129, 0.12)"
+          : "rgba(245, 158, 11, 0.15)",
+        border: `1px solid ${subscribed ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.4)"}`,
+        borderRadius: "10px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "1rem",
+        margin: "0.8rem 0",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-        {subscribed ? <Volume2 size={20} color="#10b981" /> : <BellOff size={20} color="#f59e0b" />}
+        {subscribed ? (
+          <Volume2 size={20} color="#10b981" />
+        ) : (
+          <BellOff size={20} color="#f59e0b" />
+        )}
         <div>
-          <strong style={{ fontSize: "0.88rem", display: "block", color: subscribed ? "#10b981" : "#f59e0b" }}>
-            {subscribed ? "Notificaciones de pedidos activas" : "Alertas en celular desactivadas"}
+          <strong
+            style={{
+              fontSize: "0.88rem",
+              display: "block",
+              color: subscribed ? "#10b981" : "#f59e0b",
+            }}
+          >
+            {subscribed
+              ? "Notificaciones de pedidos activas"
+              : "Alertas en celular desactivadas"}
           </strong>
           <small style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
-            {subscribed ? "Recibirás un aviso del sistema cuando llegue un pedido, incluso con la app cerrada." : "Actívalas para recibir avisos de nuevos pedidos."}
+            {subscribed
+              ? "Recibirás un aviso del sistema cuando llegue un pedido, incluso con la app cerrada."
+              : "Actívalas para recibir avisos de nuevos pedidos."}
           </small>
         </div>
       </div>
@@ -95,7 +136,20 @@ export function PushNotificationRegistrar() {
         <button
           onClick={enableNotifications}
           disabled={loading}
-          style={{ background: "#176b4d", color: "#fff", border: "none", padding: "0.45rem 0.85rem", borderRadius: "7px", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}
+          style={{
+            background: "#176b4d",
+            color: "#fff",
+            border: "none",
+            padding: "0.45rem 0.85rem",
+            borderRadius: "7px",
+            fontWeight: 600,
+            fontSize: "0.82rem",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem",
+            whiteSpace: "nowrap",
+          }}
         >
           <Bell size={15} />
           {loading ? "Activando..." : "Activar Alertas"}
