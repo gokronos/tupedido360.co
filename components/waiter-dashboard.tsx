@@ -22,6 +22,8 @@ type Product = {
   imageUrl: string;
   categoryId: string | null;
   categoryName: string | null;
+  active: boolean;
+  stockQuantity: number | null;
 };
 type Table = { id: string; name: string; active: boolean };
 type Cart = Record<string, number>;
@@ -65,7 +67,14 @@ export function WaiterDashboard({
     ]);
     const catalog = await catalogResponse.json();
     const tableData = await tablesResponse.json();
-    if (catalogResponse.ok) setProducts(catalog.products);
+    if (catalogResponse.ok)
+      setProducts(
+        catalog.products.filter(
+          (product: Product) =>
+            product.active &&
+            (product.stockQuantity === null || product.stockQuantity > 0),
+        ),
+      );
     if (tablesResponse.ok)
       setTables(tableData.tables.filter((table: Table) => table.active));
   }, []);
@@ -101,8 +110,13 @@ export function WaiterDashboard({
     0,
   );
   function quantity(id: string, change: number) {
+    const product = products.find((candidate) => candidate.id === id);
     setCart((current) => {
-      const value = Math.max(0, (current[id] ?? 0) + change);
+      const maximum = product?.stockQuantity ?? 50;
+      const value = Math.min(
+        maximum,
+        Math.max(0, (current[id] ?? 0) + change),
+      );
       const next = { ...current, [id]: value };
       if (!value) delete next[id];
       return next;
@@ -248,6 +262,10 @@ export function WaiterDashboard({
                 <small>{product.categoryName ?? "Sin categoría"}</small>
                 <strong>{product.name}</strong>
                 <span>{money(product.priceCop)}</span>
+                {product.stockQuantity !== null &&
+                  product.stockQuantity <= 3 && (
+                    <em>Quedan {product.stockQuantity}</em>
+                  )}
               </div>
               {cart[product.id] ? (
                 <div className="quantity-control">

@@ -154,6 +154,7 @@ a { color:inherit; }
 .waiter-product-icon img { width:100%; height:100%; display:block; border-radius:inherit; object-fit:cover; object-position:center 58%; }
 .waiter-product-copy { min-width:0; display:grid; gap:3px; }
 .waiter-product-copy strong { line-height:1.2; overflow-wrap:anywhere; }
+.waiter-product-copy em { color:#b86d12; font-size:10px; font-style:normal; font-weight:800; }
 .waiter-products small { color:var(--green); font-size:10px; font-weight:800; text-transform:uppercase; }
 .waiter-products article span { color:var(--muted); font-size:12px; }
 .waiter-add { width:40px; height:40px; display:grid; place-items:center; flex:none; border:0; border-radius:6px; background:var(--green); color:#fff; cursor:pointer; }
