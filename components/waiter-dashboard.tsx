@@ -35,12 +35,16 @@ export function WaiterDashboard({
   session,
   embedded = false,
   initialTableId = "",
+  lockedTableName,
+  orderId,
   modal = false,
   onOrderSaved,
 }: {
   session: AppSession;
   embedded?: boolean;
   initialTableId?: string;
+  lockedTableName?: string;
+  orderId?: string;
   modal?: boolean;
   onOrderSaved?: () => void;
 }) {
@@ -111,27 +115,34 @@ export function WaiterDashboard({
     }
     setSending(true);
     setError("");
-    const response = await fetch("/api/waiter/orders", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        tableId,
-        notes,
-        items: items.map((item) => ({
-          productId: item.id,
-          quantity: item.quantity,
-        })),
-      }),
-    });
-    const result = await response.json();
-    if (!response.ok) setError(result.error);
-    else {
-      setConfirmation(result.reference);
-      setCart({});
-      setNotes("");
-      onOrderSaved?.();
+    try {
+      const response = await fetch("/api/waiter/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          tableId,
+          orderId,
+          notes,
+          items: items.map((item) => ({
+            productId: item.id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "No se pudo guardar la adición.");
+      } else {
+        setConfirmation(result.reference);
+        setCart({});
+        setNotes("");
+        onOrderSaved?.();
+      }
+    } catch {
+      setError("No se pudo conectar para guardar la adición.");
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   }
   return (
     <main
@@ -157,20 +168,22 @@ export function WaiterDashboard({
       )}
       <section className="waiter-main">
         <div className="waiter-top">
-          <label>
-            <span>Mesa del pedido</span>
-            <select
-              value={tableId}
-              onChange={(event) => setTableId(event.target.value)}
-            >
-              <option value="">Seleccionar mesa</option>
-              {tables.map((table) => (
-                <option value={table.id} key={table.id}>
-                  {table.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {!orderId && (
+            <label>
+              <span>Mesa del pedido</span>
+              <select
+                value={tableId}
+                onChange={(event) => setTableId(event.target.value)}
+              >
+                <option value="">Seleccionar mesa</option>
+                {tables.map((table) => (
+                  <option value={table.id} key={table.id}>
+                    {table.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="waiter-search">
             <span>Buscar producto</span>
             <div>
@@ -267,7 +280,9 @@ export function WaiterDashboard({
         <div>
           <Store size={19} />
           <strong>
-            {tables.find((table) => table.id === tableId)?.name ?? "Sin mesa"}
+            {lockedTableName ??
+              tables.find((table) => table.id === tableId)?.name ??
+              "Sin mesa"}
           </strong>
           <span>
             {items.reduce((sum, item) => sum + item.quantity, 0)} productos
@@ -304,7 +319,11 @@ export function WaiterDashboard({
             onClick={submit}
           >
             <Send size={18} />
-            {sending ? "Enviando..." : "Enviar pedido"}
+            {sending
+              ? "Guardando..."
+              : orderId
+                ? "Guardar adición"
+                : "Enviar pedido"}
           </button>
         </footer>
       </aside>

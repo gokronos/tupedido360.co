@@ -251,11 +251,11 @@ export function OrdersManager({
             <header>
               <div>
                 <strong>
-                  Editar {editingOrder.tableName ?? "pedido de mesa"}
+                  Adicionar productos · {editingOrder.tableName ?? "Mesa"}
                 </strong>
                 <span>
-                  Seleccione lo que desea adicionar al pedido{" "}
-                  {editingOrder.reference}.
+                  Pedido {editingOrder.reference}. Busque y seleccione los nuevos
+                  productos.
                 </span>
               </div>
               <button onClick={() => setEditingOrder(null)} aria-label="Cerrar">
@@ -267,6 +267,8 @@ export function OrdersManager({
               embedded
               modal
               initialTableId={editingOrder.tableId}
+              lockedTableName={editingOrder.tableName ?? "Mesa"}
+              orderId={editingOrder.id}
               onOrderSaved={() => {
                 void load(true);
                 setEditingOrder(null);

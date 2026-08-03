@@ -10,6 +10,8 @@ class InsufficientStockError extends Error {
   }
 }
 
+class OrderUnavailableError extends Error {}
+
 export async function POST(request: Request) {
   const session = await currentSession();
   if (
@@ -26,6 +28,7 @@ export async function POST(request: Request) {
   const userId = session.userId;
   const body = (await request.json().catch(() => null)) as {
     tableId?: string;
+    orderId?: string;
     notes?: string;
     items?: Array<{ productId?: string; quantity?: number }>;
   } | null;
@@ -107,8 +110,10 @@ export async function POST(request: Request) {
           Number(product.price_cop) * (quantities.get(String(product.id)) ?? 0),
         0,
       );
-      let [order] =
-        await transaction`SELECT id,reference FROM orders WHERE business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`;
+      let [order] = body.orderId
+        ? await transaction`SELECT id,reference FROM orders WHERE id=${body.orderId} AND business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL FOR UPDATE`
+        : await transaction`SELECT id,reference FROM orders WHERE business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`;
+      if (body.orderId && !order) throw new OrderUnavailableError();
       const existing = Boolean(order);
       if (!order)
         [order] =
@@ -134,6 +139,12 @@ export async function POST(request: Request) {
         {
           error: `El producto "${error.productName}" cambió de disponibilidad. Actualiza el pedido.`,
         },
+        { status: 409 },
+      );
+    }
+    if (error instanceof OrderUnavailableError) {
+      return NextResponse.json(
+        { error: "Este pedido ya fue cerrado o no está disponible." },
         { status: 409 },
       );
     }
