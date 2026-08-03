@@ -8,7 +8,7 @@ KEYSTORE="$SIGNING_DIR/tupedido360-upload.jks"
 CERTIFICATE="$SIGNING_DIR/tupedido360-upload-certificate.pem"
 ALIAS="tupedido360-upload"
 UNSIGNED_BUNDLE="$PROJECT_DIR/android/app/build/outputs/bundle/release/app-release.aab"
-SIGNED_BUNDLE="$PROJECT_DIR/TuPedido360-Play-v1.aab"
+SIGNED_BUNDLE="$PROJECT_DIR/TuPedido360-Play-v2.aab"
 
 if [[ ! -x "$JDK_DIR/bin/java" ]]; then
   echo "No se encontró Java 21 en $JDK_DIR."
