@@ -7,7 +7,8 @@ export async function POST(request: Request) {
   const isPlayApp = (await cookies()).get(playAppCookie.name)?.value === playAppCookie.value;
   const path = isPlayApp ? "/acceso-app" : "/ingresar";
   const destination = process.env.NODE_ENV === "production" ? `https://tupedido360.co${path}` : new URL(path, request.url).toString();
-  const response = NextResponse.redirect(destination);
+  // A 303 turns this form POST into a normal GET for the access screen.
+  const response = NextResponse.redirect(destination, 303);
   response.cookies.set(sessionCookie.name, "", { ...sessionCookie.options, maxAge: 0 });
   return response;
 }

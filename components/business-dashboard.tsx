@@ -34,7 +34,7 @@ export function BusinessDashboard({ session, playApp = false }: { session: AppSe
   const visibleNavigation = navigation.filter(item=>(allowed[session.role??""]??[]).includes(item.id) && (!playApp || item.id !== "subscription"));
 
   return (
-    <main className="dashboard-shell">
+    <main className={`dashboard-shell${playApp ? " play-app-dashboard" : ""}`}>
       <aside className="dashboard-sidebar">
         <div className="dashboard-brand"><span><Store size={20} /></span><div>TuPedido360<small>{session.businessName}</small></div></div>
         <nav>{visibleNavigation.map(({ id, label, icon: Icon }) => <button className={section === id ? "active" : ""} onClick={() => setSection(id)} key={id} title={label}><Icon size={19} />{label}</button>)}</nav>
