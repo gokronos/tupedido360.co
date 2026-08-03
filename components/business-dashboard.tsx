@@ -53,6 +53,7 @@ export function BusinessDashboard({
   const [section, setSection] = useState(
     session.role === "kitchen" ? "kitchen" : "summary",
   );
+  const [orderTableId, setOrderTableId] = useState("");
   if (session.role === "waiter") return <WaiterDashboard session={session} />;
   const allowed: Record<string, string[]> = {
     owner: [
@@ -104,7 +105,10 @@ export function BusinessDashboard({
           {visibleNavigation.map(({ id, label, icon: Icon }) => (
             <button
               className={section === id ? "active" : ""}
-              onClick={() => setSection(id)}
+              onClick={() => {
+                if (id === "new-order") setOrderTableId("");
+                setSection(id);
+              }}
               key={id}
               title={label}
             >
@@ -169,21 +173,21 @@ export function BusinessDashboard({
                   ? "Pedidos"
                   : section === "new-order"
                     ? "Nuevo pedido"
-                  : section === "sales"
-                    ? "Historial y ventas"
-                    : section === "tables"
-                      ? "Mesas"
-                      : section === "team"
-                        ? "Equipo"
-                        : section === "design"
-                          ? "Diseño"
-                          : section === "subscription"
-                            ? "Suscripción"
-                            : section === "kitchen"
-                              ? "Cocina"
-                              : section === "settings"
-                                ? "Configuración"
-                                : `Buenos días, ${session.name}`}
+                    : section === "sales"
+                      ? "Historial y ventas"
+                      : section === "tables"
+                        ? "Mesas"
+                        : section === "team"
+                          ? "Equipo"
+                          : section === "design"
+                            ? "Diseño"
+                            : section === "subscription"
+                              ? "Suscripción"
+                              : section === "kitchen"
+                                ? "Cocina"
+                                : section === "settings"
+                                  ? "Configuración"
+                                  : `Buenos días, ${session.name}`}
             </h1>
           </div>
           <button
@@ -202,8 +206,22 @@ export function BusinessDashboard({
             playApp={playApp}
           />
         )}
-        {section === "orders" && <OrdersManager role={session.role} />}
-        {section === "new-order" && <WaiterDashboard session={session} embedded />}
+        {section === "orders" && (
+          <OrdersManager
+            role={session.role}
+            onAddProducts={(tableId) => {
+              setOrderTableId(tableId);
+              setSection("new-order");
+            }}
+          />
+        )}
+        {section === "new-order" && (
+          <WaiterDashboard
+            session={session}
+            embedded
+            initialTableId={orderTableId}
+          />
+        )}
         {section === "kitchen" && <OrdersManager role={session.role} />}
         {section === "sales" && <SalesHistory />}
         {section === "products" && <ProductManager />}

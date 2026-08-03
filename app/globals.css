@@ -652,6 +652,7 @@ a { color:inherit; }
 .order-notes { margin:1px 14px 10px; padding:8px 10px; border-left:3px solid #cb7b18; background:#fff8eb; color:#76501e; font-size:12px; }
 .order-total { padding:11px 14px; display:flex; justify-content:space-between; border-top:1px solid var(--line); }
 .order-total strong { font-size:18px; }
+.add-order-products { width:calc(100% - 28px); min-height:42px; margin:0 14px 12px; display:flex; align-items:center; justify-content:center; gap:7px; border:1px solid #176b4d; border-radius:8px; background:#eaf7f1; color:#176b4d; font-weight:900; cursor:pointer; }
 .order-payment-box { margin:0 14px 12px; padding:11px; display:flex; align-items:center; justify-content:space-between; gap:12px; border:1px solid; border-radius:6px; }
 .order-payment-box > div { display:flex; align-items:center; gap:9px; }.order-payment-box span { display:grid; gap:2px; }.order-payment-box small { font-size:10px; font-weight:500; }.order-payment-box button { min-height:38px; padding:0 12px; border:0; border-radius:6px; color:#fff; font-size:11px; font-weight:900; cursor:pointer; }.order-payment-box button:disabled { opacity:.65; cursor:wait; }
 .order-payment-box.is-pending { border-color:#e6c47c; background:#fff8e8; color:#80520b; }.order-payment-box.is-pending button { background:#b76c0d; }

@@ -34,13 +34,15 @@ const money = (value: number) =>
 export function WaiterDashboard({
   session,
   embedded = false,
+  initialTableId = "",
 }: {
   session: AppSession;
   embedded?: boolean;
+  initialTableId?: string;
 }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
-  const [tableId, setTableId] = useState("");
+  const [tableId, setTableId] = useState(initialTableId);
   const [cart, setCart] = useState<Cart>({});
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
