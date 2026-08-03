@@ -119,7 +119,7 @@ export async function POST(request: Request) {
         [order] =
           await transaction`INSERT INTO orders (business_id,reference,order_type,customer_name,customer_phone,notes,total_cop,table_id,created_by_user_id) VALUES (${businessId},${reference},'dine_in',${String(table.name)},'',${body.notes?.trim().slice(0, 500) ?? ""},${totalCop},${table.id},${userId}) RETURNING id,reference`;
       else
-        await transaction`UPDATE orders SET total_cop=total_cop+${totalCop},status=CASE WHEN status='ready' THEN 'preparing' ELSE status END,notes=CASE WHEN ${body.notes?.trim().slice(0, 500) ?? ""}='' THEN notes ELSE concat_ws(E'\n',NULLIF(notes,''),${body.notes?.trim().slice(0, 500) ?? ""}) END,updated_at=now() WHERE id=${order.id}`;
+        await transaction`UPDATE orders SET total_cop=total_cop+${totalCop},status=CASE WHEN status='ready' THEN 'preparing' ELSE status END,notes=CASE WHEN ${body.notes?.trim().slice(0, 500) ?? ""}::text='' THEN notes ELSE concat_ws(E'\n',NULLIF(notes,''),${body.notes?.trim().slice(0, 500) ?? ""}::text) END,updated_at=now() WHERE id=${order.id}`;
       const additionRound = existing
         ? Number(
             (
@@ -148,7 +148,11 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
-    throw error;
+    console.error("Failed to save waiter order", error);
+    return NextResponse.json(
+      { error: "No se pudo guardar la adición. Intente nuevamente." },
+      { status: 500 },
+    );
   }
   return NextResponse.json(
     {
