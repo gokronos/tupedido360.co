@@ -35,10 +35,14 @@ export function WaiterDashboard({
   session,
   embedded = false,
   initialTableId = "",
+  modal = false,
+  onOrderSaved,
 }: {
   session: AppSession;
   embedded?: boolean;
   initialTableId?: string;
+  modal?: boolean;
+  onOrderSaved?: () => void;
 }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -125,11 +129,14 @@ export function WaiterDashboard({
       setConfirmation(result.reference);
       setCart({});
       setNotes("");
+      onOrderSaved?.();
     }
     setSending(false);
   }
   return (
-    <main className={`waiter-shell${embedded ? " waiter-embedded" : ""}`}>
+    <main
+      className={`waiter-shell${embedded ? " waiter-embedded" : ""}${modal ? " waiter-modal" : ""}`}
+    >
       {!embedded && (
         <header>
           <div className="waiter-brand">

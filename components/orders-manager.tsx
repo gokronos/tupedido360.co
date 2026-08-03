@@ -5,17 +5,21 @@ import {
   Banknote,
   CheckCircle2,
   Clock3,
+  Edit3,
   MapPin,
   PackageCheck,
   Phone,
-  Plus,
   RefreshCw,
   ShoppingBag,
   Trash2,
   Truck,
   UtensilsCrossed,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { AppSession } from "@/lib/session";
+import { WaiterDashboard } from "@/components/waiter-dashboard";
+import { useBackDismiss } from "@/components/use-back-dismiss";
 
 type OrderStatus =
   | "received"
@@ -30,6 +34,8 @@ type OrderItem = {
   unitPriceCop: number;
   quantity: number;
   subtotalCop: number;
+  addedAt?: string;
+  additionRound?: number;
 };
 type Order = {
   id: string;
@@ -103,10 +109,10 @@ const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
 
 export function OrdersManager({
   role,
-  onAddProducts,
+  session,
 }: {
   role?: string;
-  onAddProducts?: (tableId: string) => void;
+  session?: AppSession;
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] =
@@ -116,6 +122,8 @@ export function OrdersManager({
   const [error, setError] = useState("");
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [deletedView, setDeletedView] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  useBackDismiss(Boolean(editingOrder), () => setEditingOrder(null));
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -231,10 +239,40 @@ export function OrdersManager({
               canManagePayment={["owner", "admin", "cashier"].includes(
                 role ?? "",
               )}
-              onAddProducts={onAddProducts}
+              onEdit={session ? () => setEditingOrder(order) : undefined}
               onAction={(payload) => action(payload, order.id)}
             />
           ))}
+        </div>
+      )}
+      {editingOrder && session && editingOrder.tableId && (
+        <div className="editor-backdrop order-editor-backdrop">
+          <section className="order-editor-modal">
+            <header>
+              <div>
+                <strong>
+                  Editar {editingOrder.tableName ?? "pedido de mesa"}
+                </strong>
+                <span>
+                  Seleccione lo que desea adicionar al pedido{" "}
+                  {editingOrder.reference}.
+                </span>
+              </div>
+              <button onClick={() => setEditingOrder(null)} aria-label="Cerrar">
+                <X size={20} />
+              </button>
+            </header>
+            <WaiterDashboard
+              session={session}
+              embedded
+              modal
+              initialTableId={editingOrder.tableId}
+              onOrderSaved={() => {
+                void load(true);
+                setEditingOrder(null);
+              }}
+            />
+          </section>
         </div>
       )}
       <p className="orders-refresh-note">
@@ -251,13 +289,13 @@ function OrderCard({
   order,
   busy,
   canManagePayment,
-  onAddProducts,
+  onEdit,
   onAction,
 }: {
   order: Order;
   busy: boolean;
   canManagePayment: boolean;
-  onAddProducts?: (tableId: string) => void;
+  onEdit?: () => void;
   onAction: (payload: Record<string, unknown>) => void;
 }) {
   const StatusIcon = statusInfo[order.status].icon;
@@ -274,6 +312,11 @@ function OrderCard({
       : encodeURIComponent(
           `Hola ${order.customerName}, el domicilio de tu pedido ${order.reference} cuesta ${money(order.deliveryFeeCop)}. El total es ${money(order.totalCop)}${order.estimatedMinutes ? ` y el tiempo estimado es de ${order.estimatedMinutes} minutos` : ""}. ¿Deseas confirmar el pedido?`,
         );
+  const itemGroups = new Map<number, OrderItem[]>();
+  order.items.forEach((item) => {
+    const round = item.additionRound ?? 0;
+    itemGroups.set(round, [...(itemGroups.get(round) ?? []), item]);
+  });
   function quote() {
     const feeCop = Number(
       window.prompt("Valor del domicilio", String(order.deliveryFeeCop ?? "")),
@@ -351,14 +394,33 @@ function OrderCard({
         </small>
       </div>
       <div className="order-lines">
-        {order.items.map((item, index) => (
-          <div key={`${item.productName}-${index}`}>
-            <span>
-              <b>{item.quantity}x</b>
-              {item.productName}
-            </span>
-            <strong>{money(item.subtotalCop)}</strong>
-          </div>
+        {[...itemGroups.entries()].map(([round, items]) => (
+          <section className="order-item-group" key={round}>
+            <header>
+              <strong>
+                {round === 0 ? "Pedido inicial" : `Adición ${round}`}
+              </strong>
+              <time>
+                {new Date(
+                  round === 0
+                    ? order.createdAt
+                    : (items[0].addedAt ?? order.updatedAt),
+                ).toLocaleTimeString("es-CO", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </time>
+            </header>
+            {items.map((item, index) => (
+              <div key={`${item.productName}-${index}`}>
+                <span>
+                  <b>{item.quantity}x</b>
+                  {item.productName}
+                </span>
+                <strong>{money(item.subtotalCop)}</strong>
+              </div>
+            ))}
+          </section>
         ))}
       </div>
       {order.packagingTotalCop > 0 && (
@@ -411,15 +473,12 @@ function OrderCard({
         <span>Total</span>
         <strong>{money(order.totalCop)}</strong>
       </div>
-      {onAddProducts &&
+      {onEdit &&
         order.orderType === "dine_in" &&
         order.tableId &&
         !["delivered", "cancelled"].includes(order.status) && (
-          <button
-            className="add-order-products"
-            onClick={() => onAddProducts(order.tableId!)}
-          >
-            <Plus size={17} /> Agregar productos
+          <button className="add-order-products" onClick={onEdit}>
+            <Edit3 size={17} /> Editar pedido
           </button>
         )}
       <div

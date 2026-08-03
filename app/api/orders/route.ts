@@ -64,7 +64,7 @@ export async function GET(request: Request) {
   const orderIds = orders.map((order) => order.id);
   const items = await auth.sql`
     SELECT order_id AS "orderId", product_name AS "productName", unit_price_cop AS "unitPriceCop",
-      quantity, subtotal_cop AS "subtotalCop"
+      quantity, subtotal_cop AS "subtotalCop", added_at AS "addedAt", addition_round AS "additionRound"
     FROM order_items WHERE order_id IN ${auth.sql(orderIds)} ORDER BY id`;
   const grouped = new Map<string, Array<Record<string, unknown>>>();
   for (const item of items) {

@@ -207,13 +207,7 @@ export function BusinessDashboard({
           />
         )}
         {section === "orders" && (
-          <OrdersManager
-            role={session.role}
-            onAddProducts={(tableId) => {
-              setOrderTableId(tableId);
-              setSection("new-order");
-            }}
-          />
+          <OrdersManager role={session.role} session={session} />
         )}
         {section === "new-order" && (
           <WaiterDashboard

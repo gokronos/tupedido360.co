@@ -115,9 +115,16 @@ export async function POST(request: Request) {
           await transaction`INSERT INTO orders (business_id,reference,order_type,customer_name,customer_phone,notes,total_cop,table_id,created_by_user_id) VALUES (${businessId},${reference},'dine_in',${String(table.name)},'',${body.notes?.trim().slice(0, 500) ?? ""},${totalCop},${table.id},${userId}) RETURNING id,reference`;
       else
         await transaction`UPDATE orders SET total_cop=total_cop+${totalCop},status=CASE WHEN status='ready' THEN 'preparing' ELSE status END,notes=CASE WHEN ${body.notes?.trim().slice(0, 500) ?? ""}='' THEN notes ELSE concat_ws(E'\n',NULLIF(notes,''),${body.notes?.trim().slice(0, 500) ?? ""}) END,updated_at=now() WHERE id=${order.id}`;
+      const additionRound = existing
+        ? Number(
+            (
+              await transaction`SELECT COALESCE(MAX(addition_round),0)+1 AS round FROM order_items WHERE order_id=${order.id}`
+            )[0].round,
+          )
+        : 0;
       for (const product of lockedProducts) {
         const quantity = quantities.get(String(product.id)) ?? 0;
-        await transaction`INSERT INTO order_items (order_id,product_id,product_name,unit_price_cop,quantity,subtotal_cop) VALUES (${order.id},${product.id},${product.name},${product.price_cop},${quantity},${Number(product.price_cop) * quantity})`;
+        await transaction`INSERT INTO order_items (order_id,product_id,product_name,unit_price_cop,quantity,subtotal_cop,addition_round,added_at) VALUES (${order.id},${product.id},${product.name},${product.price_cop},${quantity},${Number(product.price_cop) * quantity},${additionRound},now())`;
       }
       return { reference: String(order.reference), existing };
     });

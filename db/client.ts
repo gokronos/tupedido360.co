@@ -6,16 +6,21 @@ let schemaReady: Promise<void> | undefined;
 export function database() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) return null;
-  client ??= postgres(connectionString, { max: 5, idle_timeout: 20, connect_timeout: 30 });
+  client ??= postgres(connectionString, {
+    max: 5,
+    idle_timeout: 20,
+    connect_timeout: 30,
+  });
   return client;
 }
 
 export async function ensureSchema(options?: { migrate?: boolean }) {
   const sql = database();
   if (!sql) throw new Error("DATABASE_URL_NOT_CONFIGURED");
-  const shouldMigrate = options?.migrate === true
-    || process.env.NODE_ENV !== "production"
-    || process.env.AUTO_MIGRATE_SCHEMA === "true";
+  const shouldMigrate =
+    options?.migrate === true ||
+    process.env.NODE_ENV !== "production" ||
+    process.env.AUTO_MIGRATE_SCHEMA === "true";
   if (!shouldMigrate) return sql;
 
   schemaReady ??= (async () => {
@@ -271,6 +276,8 @@ export async function ensureSchema(options?: { migrate?: boolean }) {
         quantity INTEGER NOT NULL CHECK (quantity > 0),
         subtotal_cop INTEGER NOT NULL CHECK (subtotal_cop >= 0)
       )`;
+    await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS added_at TIMESTAMPTZ NOT NULL DEFAULT now()`;
+    await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS addition_round INTEGER NOT NULL DEFAULT 0`;
     await sql`
       CREATE TABLE IF NOT EXISTS order_deletion_log (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
