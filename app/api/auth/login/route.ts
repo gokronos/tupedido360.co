@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { compare } from "bcryptjs";
 import { ensureSchema } from "@/db/client";
 import { createSessionToken, sessionCookie } from "@/lib/session";
 import {rateLimit,requestIp} from "@/lib/rate-limit";
+import { loginDestination, playAppCookie } from "@/lib/play-app";
 
 export async function POST(request: Request) {
   if(!await rateLimit(`login:${requestIp(request)}`,10,15*60_000))return NextResponse.json({error:"Demasiados intentos. Espera 15 minutos."},{status:429});
@@ -42,7 +44,8 @@ export async function POST(request: Request) {
 
   const hostname = new URL(request.url).hostname;
   const isLocal = hostname === "localhost" || hostname === "127.0.0.1";
-  const destination = session.platformRole === "superadmin" ? "/admin" : isLocal ? `/store/${session.businessSlug}/admin` : `https://${session.businessSlug}.tupedido360.co/admin`;
+  const isPlayApp = (await cookies()).get(playAppCookie.name)?.value === playAppCookie.value;
+  const destination = loginDestination({ platformRole: session.platformRole, businessSlug: session.businessSlug, isLocal, isPlayApp });
 
   const response = NextResponse.json({ ok: true, destination });
   response.cookies.set(sessionCookie.name, createSessionToken({

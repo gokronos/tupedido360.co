@@ -3,6 +3,7 @@ import test from "node:test";
 import { isAllowedRequestOrigin, isUnsafeApiMutation } from "../lib/request-security.ts";
 import { createSessionToken, readSessionToken } from "../lib/session.ts";
 import { shouldRewriteTenantPath } from "../lib/tenant-routing.ts";
+import { loginDestination } from "../lib/play-app.ts";
 
 process.env.SESSION_SECRET = "test-secret-that-is-at-least-thirty-two-characters";
 
@@ -27,6 +28,12 @@ test("keeps shared APIs and app assets at the root on tenant subdomains", () => 
   assert.equal(shouldRewriteTenantPath("/api/orders"), false);
   assert.equal(shouldRewriteTenantPath("/manifest.json"), false);
   assert.equal(shouldRewriteTenantPath("/icon.svg"), false);
+});
+
+test("keeps Play app sessions inside the app host", () => {
+  assert.equal(loginDestination({ businessSlug: "antojos", isLocal: false, isPlayApp: true }), "/panel");
+  assert.equal(loginDestination({ businessSlug: "antojos", isLocal: false, isPlayApp: false }), "https://antojos.tupedido360.co/admin");
+  assert.equal(loginDestination({ platformRole: "superadmin", businessSlug: "", isLocal: false, isPlayApp: true }), "/admin");
 });
 
 test("session tokens reject tampering and expiration", () => {
