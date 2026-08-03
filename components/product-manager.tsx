@@ -17,6 +17,7 @@ export function ProductManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Product | null | undefined>(undefined);
   const [categoryEditor,setCategoryEditor]=useState(false);
   useBackDismiss(categoryEditor, () => setCategoryEditor(false));
@@ -34,7 +35,11 @@ export function ProductManager() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const filtered = useMemo(() => catalog.products.filter((product) => `${product.name} ${product.categoryName ?? ""}`.toLowerCase().includes(search.toLowerCase())), [catalog.products, search]);
+  const filtered = useMemo(() => catalog.products.filter((product) => {
+    const matchesSearch = `${product.name} ${product.categoryName ?? ""}`.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryId === null || product.categoryId === categoryId;
+    return matchesSearch && matchesCategory;
+  }), [catalog.products, search, categoryId]);
   const lowStockProducts = useMemo(() => catalog.products.filter((p) => p.stockQuantity !== null && p.stockQuantity <= 3), [catalog.products]);
 
   async function action(payload: Record<string, unknown>) {
@@ -59,8 +64,8 @@ export function ProductManager() {
       </div>
     )}
     {error && <p className="form-error" role="alert">{error}</p>}
-    {catalog.categories.length > 0 && <div className="category-strip"><button className="active">Todos</button>{catalog.categories.map((category) => <button key={category.id}>{category.name}</button>)}</div>}
-    {loading ? <div className="catalog-loading">Cargando catálogo...</div> : filtered.length === 0 ? <section className="empty-orders catalog-empty"><PackagePlus size={30} /><h3>{search ? "No encontramos productos" : "Agrega tu primer producto"}</h3><p>{search ? "Prueba con otro nombre o categoría." : "Crea categorías y productos para comenzar a recibir pedidos."}</p>{!search && <button onClick={() => setEditing(null)}>Nuevo producto</button>}</section> : <div className="product-list">{filtered.map((product) => <article key={product.id} className={!product.active ? "disabled" : ""}>
+    {catalog.categories.length > 0 && <div className="category-strip"><button className={categoryId === null ? "active" : ""} onClick={() => setCategoryId(null)}>Todos</button>{catalog.categories.map((category) => <button className={categoryId === category.id ? "active" : ""} onClick={() => setCategoryId(category.id)} key={category.id}>{category.name}</button>)}</div>}
+    {loading ? <div className="catalog-loading">Cargando catálogo...</div> : filtered.length === 0 ? <section className="empty-orders catalog-empty"><PackagePlus size={30} /><h3>{search || categoryId ? "No encontramos productos" : "Agrega tu primer producto"}</h3><p>{search || categoryId ? "Pruebe con otro nombre o seleccione otra categoría." : "Cree categorías y productos para comenzar a recibir pedidos."}</p>{!search && !categoryId && <button onClick={() => setEditing(null)}>Nuevo producto</button>}</section> : <div className="product-list">{filtered.map((product) => <article key={product.id} className={!product.active ? "disabled" : ""}>
       <div className="product-thumb" style={product.imageUrl ? { backgroundImage: `url(${product.imageUrl})` } : undefined}>{!product.imageUrl && <span className="product-emoji">{product.icon || <ImageIcon size={24} />}</span>}</div>
       <div className="product-info">
         <span>{product.categoryName ?? "Sin categoría"}</span>
