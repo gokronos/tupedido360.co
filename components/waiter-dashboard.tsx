@@ -11,6 +11,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import type { AppSession } from "@/lib/session";
 type Product = {
   id: string;
@@ -174,13 +175,18 @@ export function WaiterDashboard({
             <article key={product.id}>
               <span
                 className={`waiter-product-icon${product.imageUrl ? " has-image" : ""}`}
-                style={
-                  product.imageUrl
-                    ? { backgroundImage: `url(${product.imageUrl})` }
-                    : undefined
-                }
               >
-                {!product.imageUrl && (product.icon || "🍽️")}
+                {product.imageUrl ? (
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    width={176}
+                    height={164}
+                    unoptimized
+                  />
+                ) : (
+                  product.icon || "🍽️"
+                )}
               </span>
               <div className="waiter-product-copy">
                 <small>{product.categoryName ?? "Sin categoría"}</small>
