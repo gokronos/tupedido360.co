@@ -29,6 +29,7 @@ CREATE TABLE users (
   phone TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   platform_role TEXT NOT NULL DEFAULT 'user' CHECK (platform_role IN ('user', 'support', 'superadmin')),
+  session_version INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

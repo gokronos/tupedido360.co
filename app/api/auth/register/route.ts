@@ -20,7 +20,9 @@ export async function POST(request: Request) {
   const slug = body?.slug?.trim().toLowerCase();
   const password = body?.password;
 
-  if (!ownerName || ownerName.length < 3 || !phone || phone.length < 7 || !email || !email.includes("@") || !businessName || businessName.length < 2 || !slug || !slugPattern.test(slug) || !password || password.length < 8) {
+  if (!ownerName || ownerName.length < 3 || ownerName.length > 100 || !phone || phone.length < 7 || phone.length > 30 ||
+      !email || email.length > 254 || !email.includes("@") || !businessName || businessName.length < 2 || businessName.length > 120 ||
+      !slug || slug.length > 63 || !slugPattern.test(slug) || !password || password.length < 8 || password.length > 128) {
     return NextResponse.json({ error: "Revisa los datos obligatorios del formulario." }, { status: 400 });
   }
   if (reservedSlugs.has(slug)) return NextResponse.json({ error: "Esa dirección está reservada. Elige otra." }, { status: 409 });
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
       businessSlug: slug,
       role: "owner",
       platformRole: "user",
+      sessionVersion: 0,
       expiresAt: Date.now() + sessionCookie.options.maxAge * 1000,
     }), sessionCookie.options);
     return response;

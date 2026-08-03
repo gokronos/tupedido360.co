@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { ensureSchema } from "@/db/client";
 
 const COOKIE_NAME = "tupedido360_session";
 
@@ -12,6 +13,7 @@ export type AppSession = {
   businessSlug: string;
   role?: "owner" | "admin" | "cashier" | "kitchen" | "waiter";
   platformRole?: "user" | "support" | "superadmin";
+  sessionVersion?: number;
   expiresAt: number;
 };
 
@@ -49,7 +51,27 @@ export function readSessionToken(token?: string): AppSession | null {
 }
 
 export async function currentSession() {
-  return readSessionToken((await cookies()).get(COOKIE_NAME)?.value);
+  const session = readSessionToken((await cookies()).get(COOKIE_NAME)?.value);
+  if (!session || !session.userId || !process.env.DATABASE_URL) return session;
+  const sql = await ensureSchema();
+  if (session.platformRole === "superadmin") {
+    const [user] = await sql`SELECT session_version FROM users WHERE id=${session.userId} AND platform_role='superadmin'`;
+    return user && Number(user.session_version) === (session.sessionVersion ?? 0) ? session : null;
+  }
+  if (!session.businessId) return null;
+  const [membership] = await sql`
+    SELECT bm.role,b.name AS "businessName",b.slug AS "businessSlug",u.session_version AS "sessionVersion"
+    FROM business_members bm JOIN businesses b ON b.id=bm.business_id JOIN users u ON u.id=bm.user_id
+    WHERE bm.user_id=${session.userId} AND bm.business_id=${session.businessId}
+      AND bm.active=true AND b.status<>'cancelled'`;
+  if (!membership) return null;
+  if (Number(membership.sessionVersion) !== (session.sessionVersion ?? 0)) return null;
+  return {
+    ...session,
+    role: String(membership.role) as AppSession["role"],
+    businessName: String(membership.businessName),
+    businessSlug: String(membership.businessSlug),
+  };
 }
 
 export const sessionCookie = {

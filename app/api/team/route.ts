@@ -27,7 +27,10 @@ export async function POST(request: Request) {
   if (body?.action === "createEmployee") {
     const name = body.name?.trim(); const email = body.email?.trim().toLowerCase(); const phone = body.phone?.trim(); const password = body.password;
     const role = body.role && ["admin", "cashier", "kitchen", "waiter"].includes(body.role) ? body.role : null;
-    if (!name || name.length < 3 || !email || !email.includes("@") || !phone || phone.length < 7 || !password || password.length < 8 || !role) return NextResponse.json({ error: "Revisa los datos del empleado." }, { status: 400 });
+    if (!name || name.length < 3 || name.length > 100 || !email || email.length > 254 || !email.includes("@") ||
+        !phone || phone.length < 7 || phone.length > 30 || !password || password.length < 8 || password.length > 128 || !role) {
+      return NextResponse.json({ error: "Revisa los datos del empleado." }, { status: 400 });
+    }
     try {
       const passwordHash = await hash(password, 12);
       const [member] = await auth.sql.begin(async (transaction) => {

@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const expectedPassword = process.env.DEMO_USER_PASSWORD;
 
   const login = (body?.login ?? body?.email)?.trim().toLowerCase();
-  if (!login || !body?.password) {
+  if (!login || login.length > 254 || !body?.password || body.password.length > 128) {
     return NextResponse.json({ error: "No fue posible iniciar sesión." }, { status: 400 });
   }
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const sql = await ensureSchema();
     const targetSlug = body.expectedSlug?.trim().toLowerCase() ?? "";
     const [account] = await sql`
-      SELECT u.id AS user_id, u.name, u.email, u.password_hash, u.platform_role,
+      SELECT u.id AS user_id, u.name, u.email, u.password_hash, u.platform_role, u.session_version,
              b.id AS business_id, b.name AS business_name, b.slug AS business_slug, bm.role
       FROM users u
       LEFT JOIN business_members bm ON bm.user_id = u.id AND bm.active = true
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       ORDER BY (CASE WHEN b.slug = ${targetSlug} THEN 1 ELSE 0 END) DESC, bm.created_at DESC
       LIMIT 1`;
     if (account && await compare(body.password, String(account.password_hash))) {
-      session = { userId:String(account.user_id),email:String(account.email),name:String(account.name),businessName:account.business_name?String(account.business_name):"TuPedido360",businessSlug:account.business_slug?String(account.business_slug):"",...(account.business_id?{businessId:String(account.business_id)}:{}),...(account.role?{role:String(account.role) as "owner"|"admin"|"cashier"|"kitchen"|"waiter"}:{}),platformRole:String(account.platform_role) as "user"|"support"|"superadmin" };
+      session = { userId:String(account.user_id),email:String(account.email),name:String(account.name),businessName:account.business_name?String(account.business_name):"TuPedido360",businessSlug:account.business_slug?String(account.business_slug):"",...(account.business_id?{businessId:String(account.business_id)}:{}),...(account.role?{role:String(account.role) as "owner"|"admin"|"cashier"|"kitchen"|"waiter"}:{}),platformRole:String(account.platform_role) as "user"|"support"|"superadmin",sessionVersion:Number(account.session_version) };
     }
   }
 

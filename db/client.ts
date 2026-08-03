@@ -6,13 +6,17 @@ let schemaReady: Promise<void> | undefined;
 export function database() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) return null;
-  client ??= postgres(connectionString, { max: 5, idle_timeout: 20, connect_timeout: 10 });
+  client ??= postgres(connectionString, { max: 5, idle_timeout: 20, connect_timeout: 30 });
   return client;
 }
 
-export async function ensureSchema() {
+export async function ensureSchema(options?: { migrate?: boolean }) {
   const sql = database();
   if (!sql) throw new Error("DATABASE_URL_NOT_CONFIGURED");
+  const shouldMigrate = options?.migrate === true
+    || process.env.NODE_ENV !== "production"
+    || process.env.AUTO_MIGRATE_SCHEMA === "true";
+  if (!shouldMigrate) return sql;
 
   schemaReady ??= (async () => {
     await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`;
@@ -56,9 +60,11 @@ export async function ensureSchema() {
         phone TEXT NOT NULL,
         password_hash TEXT NOT NULL,
         platform_role TEXT NOT NULL DEFAULT 'user' CHECK (platform_role IN ('user', 'support', 'superadmin')),
+        session_version INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 0`;
     await sql`
       CREATE TABLE IF NOT EXISTS business_members (
         business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,

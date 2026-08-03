@@ -25,7 +25,8 @@ export async function POST(request: Request) {
   const addressReference = body?.addressReference?.trim().slice(0, 180) ?? "";
   const paymentMethod = ["cash", "transfer", "pay_at_store"].includes(body?.paymentMethod ?? "") ? body!.paymentMethod! : "cash";
   const notes = body?.notes?.trim().slice(0, 500) ?? "";
-  if (!slug || !validOrderType || !customerName || customerName.length < 3 || customerPhone.length < 10 || customerPhone.length > 15 || !body?.items?.length || body.items.length > 50) {
+  if (!slug || slug.length > 63 || !validOrderType || !customerName || customerName.length < 3 || customerName.length > 100 ||
+      customerPhone.length < 10 || customerPhone.length > 15 || deliveryAddress.length > 200 || !body?.items?.length || body.items.length > 50) {
     return NextResponse.json({ error: "Revisa los datos del pedido." }, { status: 400 });
   }
   if (validOrderType === "delivery" && (deliveryAddress.length < 5 || neighborhood.length < 2)) return NextResponse.json({ error: "Escribe la dirección y el barrio de entrega." }, { status: 400 });
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     const quantity = Number(item.quantity);
     if (!item.productId || !Number.isInteger(quantity) || quantity < 1 || quantity > 50) return NextResponse.json({ error: "Hay productos inválidos en el carrito." }, { status: 400 });
     quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + quantity);
+    if ((quantities.get(item.productId) ?? 0) > 50) return NextResponse.json({ error: "La cantidad máxima por producto es 50." }, { status: 400 });
   }
 
   const sql = await ensureSchema();
