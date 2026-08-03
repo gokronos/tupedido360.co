@@ -732,18 +732,25 @@ function CorrectionModal({
               <strong>{selected.productName}</strong>
               <small>Hay {selected.quantity} en este pedido</small>
             </div>
-            <label>
-              <span>¿Cuántas unidades desea quitar?</span>
-              <div className="correction-quantity">
-                <button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Disminuir cantidad">
-                  <Minus size={19} />
-                </button>
-                <strong>{quantity}</strong>
-                <button onClick={() => setQuantity((value) => Math.min(selected.quantity, value + 1))} aria-label="Aumentar cantidad">
-                  <Plus size={19} />
-                </button>
+            {selected.quantity === 1 ? (
+              <div className="correction-single-quantity">
+                <CheckCircle2 size={19} />
+                <span>Se quitará la única unidad del pedido.</span>
               </div>
-            </label>
+            ) : (
+              <label>
+                <span>¿Cuántas unidades desea quitar?</span>
+                <div className="correction-quantity">
+                  <button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Disminuir cantidad">
+                    <Minus size={19} />
+                  </button>
+                  <strong>{quantity}</strong>
+                  <button onClick={() => setQuantity((value) => Math.min(selected.quantity, value + 1))} aria-label="Aumentar cantidad">
+                    <Plus size={19} />
+                  </button>
+                </div>
+              </label>
+            )}
             <fieldset className="correction-reasons">
               <legend>¿Por qué se corrige?</legend>
               {["Marcado por error", "El cliente cambió de opinión", "Producto no disponible"].map((option) => (
@@ -764,7 +771,11 @@ function CorrectionModal({
             {error && <p className="form-error">{error}</p>}
             <button className="save-correction" disabled={sending} onClick={save}>
               <RotateCcw size={17} />
-              {sending ? "Guardando..." : `Confirmar: quitar ${quantity}`}
+              {sending
+                ? "Guardando..."
+                : quantity === 1
+                  ? "Confirmar: quitar 1 unidad"
+                  : `Confirmar: quitar ${quantity} unidades`}
             </button>
           </div>
         )}
