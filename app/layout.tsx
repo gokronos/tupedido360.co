@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./landing-refresh.css";
 
 export const metadata: Metadata = {
   title: "TuPedido360 | Crea tu negocio",

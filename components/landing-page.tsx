@@ -13,6 +13,8 @@ import {
   ExternalLink,
   Flame,
   Globe,
+  LayoutDashboard,
+  PackageCheck,
   QrCode,
   Rocket,
   ShieldCheck,
@@ -34,10 +36,10 @@ export function LandingPage() {
       <div className="top-promo-bar">
         <Sparkles size={16} />
         <span>
-          <strong>¡PRUEBA GRATIS 30 DÍAS!</strong> Sin tarjeta de crédito · Descarga la App APK Nativa para Android
+          <strong>TODO TU NEGOCIO POR $30.000 AL MES</strong> · Prueba gratis durante 30 días
         </span>
         <a href="#registro" className="promo-btn">
-          Empieza Hoy <ArrowRight size={14} />
+          Crear mi negocio <ArrowRight size={14} />
         </a>
       </div>
 
@@ -55,7 +57,7 @@ export function LandingPage() {
           <nav className="nav-links">
             <a href="#caracteristicas">Características</a>
             <a href="#beneficios">Beneficios</a>
-            <a href="#app-android">App Android</a>
+            <a href="#incluye">¿Qué incluye?</a>
             <a href="#planes">Planes y Precios</a>
             <a href="https://antojos.tupedido360.co" target="_blank" rel="noreferrer" className="demo-link">
               Ver Menú Demo <ExternalLink size={14} />
@@ -78,50 +80,50 @@ export function LandingPage() {
         <div className="hero-container">
           <div className="hero-content">
             <div className="hero-badge">
-              <Flame size={16} color="#d6f35c" />
-              <span>Pedidos, menú digital y operación en un solo lugar</span>
+              <Flame size={16} />
+              <span>La herramienta completa para pequeños negocios</span>
             </div>
 
             <h1 className="hero-title">
-              La Plataforma Todo en Uno para <span className="highlight-text">Multiplicar tus Ventas</span> y Automatizar tu Restaurante
+              Tu página web, tus pedidos y el control de tu negocio, <span className="highlight-text">todo por $30.000 al mes</span>
             </h1>
 
             <p className="hero-subtitle">
-              Gestiona domicilios, pedidos en mesa con código QR y retiro en local desde tu celular. Notificaciones push, control de stock y suscripciones procesadas por Mercado Pago.
+              No pagues por cinco herramientas diferentes. Con TuPedido360 recibes un menú web profesional, pedidos por QR, panel de ventas, control de caja, mini inventario y acceso para tu equipo en una sola plataforma.
             </p>
 
             <div className="hero-actions">
               <a href="#registro" className="btn-hero-primary">
-                <Rocket size={19} /> Crear Mi Restaurante Gratis
+                <Rocket size={19} /> Quiero mis 30 días gratis
               </a>
               <a href="/TuPedido360.apk" download className="btn-hero-apk">
-                <Download size={19} /> Descargar App APK Android
+                <Download size={19} /> Descargar app Android
               </a>
               <a href="https://antojos.tupedido360.co" target="_blank" rel="noreferrer" className="btn-hero-secondary">
-                <Globe size={18} /> Ver Demo En Vivo
+                <Globe size={18} /> Ver cómo quedaría mi menú
               </a>
             </div>
 
             {/* Quick Badges */}
             <div className="hero-trust-badges">
-              <span><CheckCircle2 size={16} color="#d6f35c" /> 30 Días de Prueba Gratis</span>
-              <span><CheckCircle2 size={16} color="#d6f35c" /> 0% Comisiones por Pedido</span>
-              <span><CheckCircle2 size={16} color="#d6f35c" /> Instalación en 3 Minutos</span>
+              <span><CheckCircle2 size={16} /> Sin tarjeta para empezar</span>
+              <span><CheckCircle2 size={16} /> 0% comisión por pedido</span>
+              <span><CheckCircle2 size={16} /> Cancela cuando quieras</span>
             </div>
 
             {/* Metrics Counter */}
             <div className="hero-metrics">
               <div className="metric-box">
-                <strong>+35%</strong>
-                <small>Aumento Promedio en Ventas</small>
+                <strong>$30 mil</strong>
+                <small>Todo incluido al mes</small>
               </div>
               <div className="metric-box">
-                <strong>0%</strong>
-                <small>Comisiones de Intermediarios</small>
+                <strong>6 en 1</strong>
+                <small>Herramientas para operar</small>
               </div>
               <div className="metric-box">
-                <strong>100%</strong>
-                <small>Alertas Sonoras en Tiempo Real</small>
+                <strong>30 días</strong>
+                <small>Para probar sin pagar</small>
               </div>
             </div>
           </div>
@@ -156,7 +158,7 @@ export function LandingPage() {
                       <span>Pedido:</span> <strong>2x Hamburguesa Doble Queso + 2x Cerveza Club Colombia</strong>
                     </div>
                     <div className="detail-row highlight">
-                      <span>Total Ahorrado sin Comisión:</span> <strong>$54.000 COP</strong>
+                      <span>Total del pedido:</span> <strong>$54.000 COP</strong>
                     </div>
                   </div>
                 </div>
@@ -172,13 +174,35 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section id="incluye" className="solution-bundle">
+        <div className="container">
+          <div className="bundle-heading">
+            <span className="section-tag">UN SOLO PAGO, TODO INCLUIDO</span>
+            <h2>Esto es lo que recibe tu negocio por solo $30.000 al mes</h2>
+            <p>Una solución completa para vender, atender y llevar el control diario sin enredarte con varias aplicaciones.</p>
+          </div>
+          <div className="bundle-grid">
+            <article><Globe size={25} /><strong>Página web y menú digital</strong><span>Tu propio enlace para compartir por WhatsApp, redes sociales y código QR.</span></article>
+            <article><QrCode size={25} /><strong>Pedidos por QR</strong><span>Para mesa, domicilio o recoger en el negocio, sin cobrarte comisión.</span></article>
+            <article><LayoutDashboard size={25} /><strong>Panel de administración</strong><span>Gestiona productos, precios, pedidos, mesas y personal desde el celular.</span></article>
+            <article><BarChart3 size={25} /><strong>Control de ventas y caja</strong><span>Consulta ingresos, historial, productos más vendidos y movimientos diarios.</span></article>
+            <article><PackageCheck size={25} /><strong>Mini inventario</strong><span>Controla existencias y deja de ofrecer automáticamente lo que se agotó.</span></article>
+            <article><ChefHat size={25} /><strong>Cocina y equipo conectados</strong><span>Roles para dueño, caja, cocina y meseros con pedidos claros en tiempo real.</span></article>
+          </div>
+          <div className="bundle-close">
+            <div><strong>Todo esto vale menos que un café al día.</strong><span>Sin comisión por venta y sin permanencia.</span></div>
+            <a href="#registro">Empezar gratis <ArrowRight size={17} /></a>
+          </div>
+        </div>
+      </section>
+
       {/* Interactive Feature Demo Showcase */}
       <section id="caracteristicas" className="section-features">
         <div className="container">
           <div className="section-header center">
-            <span className="section-tag">TECNOLOGÍA DE AVANCE</span>
-            <h2>Todo lo que Tu Restaurante Necesita en un Solo Lugar</h2>
-            <p>Diseñado específicamente para el mercado gastronómico y comercial en Colombia.</p>
+            <span className="section-tag">MIRA CÓMO FUNCIONA</span>
+            <h2>Simple para tus clientes. Poderoso para tu negocio.</h2>
+            <p>Tus clientes compran fácilmente y tú mantienes el control desde cualquier dispositivo.</p>
           </div>
 
           <div className="feature-tabs">
@@ -311,16 +335,16 @@ export function LandingPage() {
       <section id="beneficios" className="section-benefits">
         <div className="container">
           <div className="section-header center">
-            <span className="section-tag">BENEFICIOS COMPROBADOS</span>
-            <h2>¿Por qué los Mejores Restaurantes de Colombia eligen TuPedido360?</h2>
-            <p>Maximiza tus márgenes de ganancia eliminando las altas comisiones de terceros.</p>
+            <span className="section-tag">MENOS GASTOS, MÁS CONTROL</span>
+            <h2>Deja de perder tiempo y dinero administrando todo por separado</h2>
+            <p>TuPedido360 organiza la operación diaria y te ayuda a vender directamente a tus clientes.</p>
           </div>
 
           <div className="benefits-grid">
             <article className="benefit-card">
               <div className="card-icon"><TrendingUp size={28} /></div>
-              <h3>Incrementa tus Ventas un 35%</h3>
-              <p>Un menú digital con fotos llamativas e interfaz rápida incita a los clientes a añadir bebidas, acompañamientos y postres adicionales a sus órdenes.</p>
+              <h3>Una vitrina digital que sí antoja</h3>
+              <p>Presenta tus productos con fotos, categorías y precios claros en un enlace profesional que puedes compartir en segundos.</p>
             </article>
 
             <article className="benefit-card">
@@ -343,8 +367,8 @@ export function LandingPage() {
 
             <article className="benefit-card">
               <div className="card-icon"><BarChart3 size={28} /></div>
-              <h3>Historial de Ventas y Finanzas</h3>
-              <p>Conoce tus ingresos del día, métricas de platos más vendidos y desempeño financiero de tu negocio en gráficos estadísticos en tiempo real.</p>
+              <h3>Control de Ventas y Caja</h3>
+              <p>Consulta ingresos, historial de pedidos y productos más vendidos para tomar mejores decisiones cada día.</p>
             </article>
 
             <article className="benefit-card">
@@ -387,8 +411,8 @@ export function LandingPage() {
         <div className="container">
           <div className="section-header center">
             <span className="section-tag">PRECIOS TRANSPARENTES</span>
-            <h2>Planes Flexibles Adaptados a tu Negocio</h2>
-            <p>Todos los planes incluyen <strong>30 DÍAS DE PRUEBA GRATIS</strong>. No requerimos tarjeta de crédito para empezar.</p>
+            <h2>Empieza por $30.000 al mes. Ahorra si eliges más tiempo.</h2>
+            <p>Todos los planes incluyen la plataforma completa y <strong>30 días de prueba gratis</strong>, sin tarjeta para comenzar.</p>
           </div>
 
           <div className="pricing-grid">
@@ -478,8 +502,8 @@ export function LandingPage() {
           <div className="register-landing-wrap">
             <div className="register-info">
               <span className="section-tag">REGISTRO INSTANTÁNEO</span>
-              <h2>Crea la Cuenta de tu Restaurante en Menos de 2 Minutos</h2>
-              <p>Comienza a recibir pedidos hoy mismo. Configuración rápida sin complicaciones técnicas.</p>
+              <h2>Dale a tu negocio la presencia y el control que merece</h2>
+              <p>Crea tu cuenta, publica tu menú y descubre durante 30 días todo lo que TuPedido360 puede hacer por ti.</p>
 
               <div className="benefits-list-mini">
                 <div className="mini-item">
