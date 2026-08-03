@@ -5,72 +5,140 @@ import { currentSession } from "@/lib/session";
 import { parseOrderItems } from "@/lib/order-input";
 
 class InsufficientStockError extends Error {
-  constructor(public productName: string) { super("INSUFFICIENT_STOCK"); }
+  constructor(public productName: string) {
+    super("INSUFFICIENT_STOCK");
+  }
 }
 
 export async function POST(request: Request) {
   const session = await currentSession();
-  if (!session?.businessId || !session.userId || !session.role || !["owner", "admin", "waiter"].includes(session.role)) return NextResponse.json({ error: "No tienes permiso para tomar pedidos." }, { status: 403 });
+  if (
+    !session?.businessId ||
+    !session.userId ||
+    !session.role ||
+    !["owner", "admin", "cashier", "waiter"].includes(session.role)
+  )
+    return NextResponse.json(
+      { error: "No tienes permiso para tomar pedidos." },
+      { status: 403 },
+    );
   const businessId = session.businessId;
   const userId = session.userId;
-  const body = await request.json().catch(() => null) as { tableId?: string; notes?: string; items?: Array<{ productId?: string; quantity?: number }> } | null;
-  if (!body?.tableId) return NextResponse.json({ error: "Selecciona una mesa y agrega productos." }, { status: 400 });
+  const body = (await request.json().catch(() => null)) as {
+    tableId?: string;
+    notes?: string;
+    items?: Array<{ productId?: string; quantity?: number }>;
+  } | null;
+  if (!body?.tableId)
+    return NextResponse.json(
+      { error: "Selecciona una mesa y agrega productos." },
+      { status: 400 },
+    );
   const parsedItems = parseOrderItems(body.items);
-  if (!parsedItems.ok) return NextResponse.json({ error: parsedItems.reason === "quantity_limit" ? "La cantidad máxima por producto es 50." : "El pedido contiene productos inválidos." }, { status: 400 });
+  if (!parsedItems.ok)
+    return NextResponse.json(
+      {
+        error:
+          parsedItems.reason === "quantity_limit"
+            ? "La cantidad máxima por producto es 50."
+            : "El pedido contiene productos inválidos.",
+      },
+      { status: 400 },
+    );
   const quantities = parsedItems.quantities;
   const sql = await ensureSchema();
-  const[subscription]=await sql`SELECT 1 FROM subscriptions WHERE business_id=${businessId} AND (is_lifetime OR (status='trialing' AND trial_ends_at>now()) OR (status='active' AND (current_period_ends_at IS NULL OR current_period_ends_at>now())))`;
-  if(!subscription)return NextResponse.json({error:"La suscripción del negocio no está activa."},{status:402});
-  const [table] = await sql`SELECT id,name FROM restaurant_tables WHERE id=${body.tableId} AND business_id=${businessId} AND active=true`;
-  if (!table) return NextResponse.json({ error: "Mesa no disponible." }, { status: 404 });
+  const [subscription] =
+    await sql`SELECT 1 FROM subscriptions WHERE business_id=${businessId} AND (is_lifetime OR (status='trialing' AND trial_ends_at>now()) OR (status='active' AND (current_period_ends_at IS NULL OR current_period_ends_at>now())))`;
+  if (!subscription)
+    return NextResponse.json(
+      { error: "La suscripción del negocio no está activa." },
+      { status: 402 },
+    );
+  const [table] =
+    await sql`SELECT id,name FROM restaurant_tables WHERE id=${body.tableId} AND business_id=${businessId} AND active=true`;
+  if (!table)
+    return NextResponse.json({ error: "Mesa no disponible." }, { status: 404 });
   const ids = [...quantities.keys()];
-  const products = await sql`SELECT id,name,price_cop,stock_quantity FROM products WHERE business_id=${businessId} AND active=true AND id IN ${sql(ids)}`;
-  if (products.length !== ids.length) return NextResponse.json({ error: "Uno de los productos no está disponible." }, { status: 409 });
+  const products =
+    await sql`SELECT id,name,price_cop,stock_quantity FROM products WHERE business_id=${businessId} AND active=true AND id IN ${sql(ids)}`;
+  if (products.length !== ids.length)
+    return NextResponse.json(
+      { error: "Uno de los productos no está disponible." },
+      { status: 409 },
+    );
   for (const product of products) {
     const qty = quantities.get(String(product.id)) ?? 0;
-    const stock = product.stock_quantity !== null ? Number(product.stock_quantity) : null;
+    const stock =
+      product.stock_quantity !== null ? Number(product.stock_quantity) : null;
     if (stock !== null && stock < qty) {
-      return NextResponse.json({
-        error: stock === 0
-          ? `El producto "${product.name}" está agotado.`
-          : `El producto "${product.name}" solo tiene ${stock} unidad(es) disponible(s).`
-      }, { status: 409 });
+      return NextResponse.json(
+        {
+          error:
+            stock === 0
+              ? `El producto "${product.name}" está agotado.`
+              : `El producto "${product.name}" solo tiene ${stock} unidad(es) disponible(s).`,
+        },
+        { status: 409 },
+      );
     }
   }
   let totalCop = 0;
   const reference = `TP-${randomBytes(4).toString("hex").toUpperCase()}`;
   let result: { reference: string; existing: boolean };
   try {
-    result=await sql.begin(async (transaction) => {
-    const lockedProducts = [];
-    for (const product of products) {
-      const quantity = quantities.get(String(product.id)) ?? 0;
-      const updated = await transaction`
+    result = await sql.begin(async (transaction) => {
+      const lockedProducts = [];
+      for (const product of products) {
+        const quantity = quantities.get(String(product.id)) ?? 0;
+        const updated = await transaction`
         UPDATE products
         SET stock_quantity=CASE WHEN stock_quantity IS NULL THEN NULL ELSE stock_quantity-${quantity} END,
             updated_at=now()
         WHERE id=${product.id} AND business_id=${businessId} AND active=true
           AND (stock_quantity IS NULL OR stock_quantity>=${quantity})
         RETURNING id,name,price_cop`;
-      if (!updated.length) throw new InsufficientStockError(String(product.name));
-      lockedProducts.push(updated[0]);
-    }
-    totalCop = lockedProducts.reduce((total, product) => total + Number(product.price_cop) * (quantities.get(String(product.id)) ?? 0), 0);
-    let [order] = await transaction`SELECT id,reference FROM orders WHERE business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`;
-    const existing=Boolean(order);
-    if(!order)[order]=await transaction`INSERT INTO orders (business_id,reference,order_type,customer_name,customer_phone,notes,total_cop,table_id,created_by_user_id) VALUES (${businessId},${reference},'dine_in',${String(table.name)},'',${body.notes?.trim().slice(0,500) ?? ""},${totalCop},${table.id},${userId}) RETURNING id,reference`;
-    else await transaction`UPDATE orders SET total_cop=total_cop+${totalCop},status=CASE WHEN status='ready' THEN 'preparing' ELSE status END,notes=CASE WHEN ${body.notes?.trim().slice(0,500)??""}='' THEN notes ELSE concat_ws(E'\n',NULLIF(notes,''),${body.notes?.trim().slice(0,500)??""}) END,updated_at=now() WHERE id=${order.id}`;
-    for (const product of lockedProducts) {
-      const quantity = quantities.get(String(product.id)) ?? 0;
-      await transaction`INSERT INTO order_items (order_id,product_id,product_name,unit_price_cop,quantity,subtotal_cop) VALUES (${order.id},${product.id},${product.name},${product.price_cop},${quantity},${Number(product.price_cop)*quantity})`;
-    }
-    return {reference:String(order.reference),existing};
+        if (!updated.length)
+          throw new InsufficientStockError(String(product.name));
+        lockedProducts.push(updated[0]);
+      }
+      totalCop = lockedProducts.reduce(
+        (total, product) =>
+          total +
+          Number(product.price_cop) * (quantities.get(String(product.id)) ?? 0),
+        0,
+      );
+      let [order] =
+        await transaction`SELECT id,reference FROM orders WHERE business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`;
+      const existing = Boolean(order);
+      if (!order)
+        [order] =
+          await transaction`INSERT INTO orders (business_id,reference,order_type,customer_name,customer_phone,notes,total_cop,table_id,created_by_user_id) VALUES (${businessId},${reference},'dine_in',${String(table.name)},'',${body.notes?.trim().slice(0, 500) ?? ""},${totalCop},${table.id},${userId}) RETURNING id,reference`;
+      else
+        await transaction`UPDATE orders SET total_cop=total_cop+${totalCop},status=CASE WHEN status='ready' THEN 'preparing' ELSE status END,notes=CASE WHEN ${body.notes?.trim().slice(0, 500) ?? ""}='' THEN notes ELSE concat_ws(E'\n',NULLIF(notes,''),${body.notes?.trim().slice(0, 500) ?? ""}) END,updated_at=now() WHERE id=${order.id}`;
+      for (const product of lockedProducts) {
+        const quantity = quantities.get(String(product.id)) ?? 0;
+        await transaction`INSERT INTO order_items (order_id,product_id,product_name,unit_price_cop,quantity,subtotal_cop) VALUES (${order.id},${product.id},${product.name},${product.price_cop},${quantity},${Number(product.price_cop) * quantity})`;
+      }
+      return { reference: String(order.reference), existing };
     });
   } catch (error) {
     if (error instanceof InsufficientStockError) {
-      return NextResponse.json({ error: `El producto "${error.productName}" cambió de disponibilidad. Actualiza el pedido.` }, { status: 409 });
+      return NextResponse.json(
+        {
+          error: `El producto "${error.productName}" cambió de disponibilidad. Actualiza el pedido.`,
+        },
+        { status: 409 },
+      );
     }
     throw error;
   }
-  return NextResponse.json({ ok: true, reference:result.reference, totalCop, addedToExisting:result.existing }, { status: 201 });
+  return NextResponse.json(
+    {
+      ok: true,
+      reference: result.reference,
+      totalCop,
+      addedToExisting: result.existing,
+    },
+    { status: 201 },
+  );
 }
