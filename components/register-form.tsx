@@ -15,7 +15,7 @@ function slugify(value: string) {
     .slice(0, 40);
 }
 
-export function RegisterForm() {
+export function RegisterForm({ playApp = false }: { playApp?: boolean }) {
   const router = useRouter();
   const [businessName, setBusinessName] = useState("");
   const [slug, setSlug] = useState("");
@@ -112,8 +112,10 @@ export function RegisterForm() {
         {loading ? "Creando negocio..." : "Crear negocio"} <ArrowRight size={19} />
       </button>
 
-      <p className="billing-copy">Primer mes sin costo. Después, <strong>$30.000 COP al mes</strong>.</p>
-      <p className="login-copy">¿Ya tienes una cuenta? <Link href="/ingresar">Iniciar sesión</Link></p>
+      {playApp
+        ? <p className="billing-copy">La prueba gratuita termina automáticamente después de 30 días. No se realizará ningún cobro.</p>
+        : <p className="billing-copy">Primer mes sin costo. Después, <strong>$30.000 COP al mes</strong>.</p>}
+      {!playApp && <p className="login-copy">¿Ya tienes una cuenta? <Link href="/ingresar">Iniciar sesión</Link></p>}
     </form>
   );
 }

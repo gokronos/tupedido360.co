@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { playAppCookie } from "@/lib/play-app";
 import { randomUUID } from "node:crypto";
 import { ensureSchema } from "@/db/client";
 import { currentSession } from "@/lib/session";
@@ -12,6 +14,9 @@ const PLAN_MAP: Record<string, { months: number; name: string; priceCop: number 
 
 export async function POST(request: Request) {
   try {
+    if ((await cookies()).get(playAppCookie.name)?.value === playAppCookie.value) {
+      return NextResponse.json({ error: "Las compras no están disponibles en la aplicación de Google Play." }, { status: 403 });
+    }
     const session = await currentSession();
     if (!session?.userId || !session.businessId) {
       return NextResponse.json({ error: "No autenticado. Por favor inicia sesión nuevamente." }, { status: 401 });

@@ -1744,6 +1744,17 @@ a { color:inherit; }
 .landing-whatsapp { position:fixed; z-index:1000; right:22px; bottom:22px; padding:13px 17px; display:flex; align-items:center; gap:8px; border-radius:30px; background:#25d366; color:#062d17; text-decoration:none; font-weight:900; box-shadow:0 12px 30px rgba(0,0,0,.3); transition:transform .2s; }
 .landing-whatsapp:hover { transform:translateY(-2px); }
 
+.play-app-auth { padding:24px 14px; align-items:flex-start; }
+.play-app-auth-box { width:min(100%, 520px); }
+.play-app-auth-box.registering { width:min(100%, 680px); }
+.play-app-trial-note { display:flex; align-items:center; gap:12px; margin:18px 0; padding:14px; border:1px solid rgba(23,107,77,.2); border-radius:14px; background:rgba(214,243,92,.16); color:#174c38; }
+.play-app-trial-note div { display:flex; flex-direction:column; gap:2px; }
+.play-app-trial-note strong { font-size:.96rem; }
+.play-app-trial-note span { font-size:.82rem; color:#45685a; }
+.play-app-tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:5px; margin-bottom:22px; border-radius:12px; background:#edf3ef; }
+.play-app-tabs button { display:flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:9px; border:0; border-radius:9px; background:transparent; color:#557064; font-weight:800; cursor:pointer; }
+.play-app-tabs button.active { background:#176b4d; color:#fff; box-shadow:0 5px 14px rgba(23,107,77,.2); }
+
 /* RESPONSIVE LANDING MEDIA QUERIES */
 @media (max-width: 1024px) {
   .hero-container { grid-template-columns: 1fr; }

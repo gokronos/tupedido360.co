@@ -27,11 +27,11 @@ const navigation = [
   { id: "settings", label: "Configuración", icon: Settings },
 ];
 
-export function BusinessDashboard({ session }: { session: AppSession }) {
+export function BusinessDashboard({ session, playApp = false }: { session: AppSession; playApp?: boolean }) {
   const [section, setSection] = useState(session.role==="kitchen"?"kitchen":"summary");
   if (session.role === "waiter") return <WaiterDashboard session={session} />;
   const allowed:Record<string,string[]>={owner:["summary","orders","sales","products","tables","team","kitchen","design","subscription","settings"],admin:["summary","orders","sales","products","tables","team","kitchen","design","settings"],cashier:["summary","orders","sales","settings"],kitchen:["kitchen","settings"]};
-  const visibleNavigation = navigation.filter(item=>(allowed[session.role??""]??[]).includes(item.id));
+  const visibleNavigation = navigation.filter(item=>(allowed[session.role??""]??[]).includes(item.id) && (!playApp || item.id !== "subscription"));
 
   return (
     <main className="dashboard-shell">
@@ -56,7 +56,7 @@ export function BusinessDashboard({ session }: { session: AppSession }) {
           <div><p>{session.role === "owner" ? "Panel del dueño" : session.role==="kitchen"?"Panel de cocina":"Panel del administrador"}</p><h1>{section === "products" ? "Productos" : section === "orders" ? "Pedidos" : section === "sales" ? "Historial y ventas" : section === "tables" ? "Mesas" : section === "team" ? "Equipo" : section === "design" ? "Diseño" : section==="subscription"?"Suscripción":section==="kitchen"?"Cocina" : section === "settings" ? "Configuración" : `Buenos días, ${session.name}`}</h1></div>
           <button className="icon-button" title="Notificaciones" aria-label="Notificaciones"><Bell size={20} /></button>
         </header>
-        {section === "summary" && <Summary session={session} onProducts={() => setSection("products")} onSettings={()=>setSection("subscription")} />}
+        {section === "summary" && <Summary session={session} onProducts={() => setSection("products")} onSettings={()=>setSection("subscription")} playApp={playApp} />}
         {section === "orders" && <OrdersManager role={session.role} />}
         {section === "kitchen" && <OrdersManager role={session.role} />}
         {section === "sales" && <SalesHistory />}
@@ -64,7 +64,7 @@ export function BusinessDashboard({ session }: { session: AppSession }) {
         {section === "tables" && <TablesManager />}
         {section === "team" && <TeamManager />}
         {section === "design" && <DesignManager slug={session.businessSlug ?? ""} />}
-        {section === "subscription"&&<SubscriptionManager/>}
+        {section === "subscription"&&!playApp&&<SubscriptionManager/>}
         {section === "settings" && <SettingsManager />}
         {!['summary', 'orders', 'sales', 'products', 'tables', 'team', 'kitchen', 'design','subscription', 'settings'].includes(section) && <PendingSection name={navigation.find((item) => item.id === section)?.label ?? "Sección"} />}
       </section>
@@ -72,14 +72,14 @@ export function BusinessDashboard({ session }: { session: AppSession }) {
   );
 }
 
-function Summary({ session, onProducts,onSettings }: { session: AppSession; onProducts: () => void;onSettings:()=>void }) {
+function Summary({ session, onProducts,onSettings,playApp }: { session: AppSession; onProducts: () => void;onSettings:()=>void;playApp:boolean }) {
   const[data,setData]=useState<{metrics:{ordersToday:number;salesToday:number;activeOrders:number;activeProducts:number};subscription:{status:string;isLifetime:boolean;monthlyPriceCop:number;trialEndsAt:string}}|null>(null);
   useEffect(()=>{const timer=setTimeout(async()=>{const response=await fetch("/api/dashboard",{cache:"no-store"});if(response.ok)setData(await response.json())},0);return()=>clearTimeout(timer)},[]);
   const money=(value:number)=>new Intl.NumberFormat("es-CO",{style:"currency",currency:"COP",maximumFractionDigits:0}).format(value);
   const metrics=data?.metrics;
   return <>
     <PushNotificationRegistrar />
-    <div className="trial-banner"><div><CreditCard size={21} /><span><strong>{data?.subscription?.isLifetime?"Membresía vitalicia":data?.subscription?.status==="trialing"?"Periodo de prueba activo":"Suscripción mensual"}</strong><small>{data?.subscription?.isLifetime?"Sin pagos mensuales.":data?.subscription?.status==="trialing"?`Finaliza el ${new Date(data.subscription.trialEndsAt).toLocaleDateString("es-CO")}`:`Plan de ${money(data?.subscription?.monthlyPriceCop??30000)} al mes`}</small></span></div><button onClick={onSettings}>Ver suscripción</button></div>
+    <div className="trial-banner"><div><CreditCard size={21} /><span><strong>{data?.subscription?.isLifetime?"Acceso permanente":data?.subscription?.status==="trialing"?"Periodo de prueba activo":playApp?"Estado de acceso":"Suscripción mensual"}</strong><small>{data?.subscription?.isLifetime?"Su cuenta está activa.":data?.subscription?.status==="trialing"?`La prueba gratuita finaliza el ${new Date(data.subscription.trialEndsAt).toLocaleDateString("es-CO")}`:playApp?"Consulte aquí el estado de su cuenta.":`Plan de ${money(data?.subscription?.monthlyPriceCop??30000)} al mes`}</small></span></div>{!playApp&&<button onClick={onSettings}>Ver suscripción</button>}</div>
     <div className="panel-section-title"><div><h2>Resumen de hoy</h2><p>La actividad de tu negocio aparecerá aquí.</p></div><a href={`https://${session.businessSlug}.tupedido360.co`} target="_blank" rel="noreferrer">Ver tienda <ExternalLink size={16} /></a></div>
     <div className="metric-grid">
       <article><span>Pedidos</span><strong>{metrics?.ordersToday??"..."}</strong><small>Recibidos hoy</small></article>
