@@ -2,12 +2,14 @@
 
 import { Plus, UserRoundCheck, UserRoundX, X } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useBackDismiss } from "@/components/use-back-dismiss";
 
 type Member = { id: string; name: string; email: string; phone: string; role: string; active: boolean };
 const roleNames: Record<string,string> = { owner:"Dueño", admin:"Administrador", cashier:"Caja", kitchen:"Cocina", waiter:"Mesero" };
 
 export function TeamManager() {
   const [members,setMembers]=useState<Member[]>([]); const [open,setOpen]=useState(false); const [error,setError]=useState(""); const [loading,setLoading]=useState(true);
+  useBackDismiss(open, () => setOpen(false));
   const load=useCallback(async()=>{const response=await fetch("/api/team");const result=await response.json();if(response.ok)setMembers(result.members);else setError(result.error);setLoading(false);},[]);
   useEffect(()=>{const timer=window.setTimeout(()=>void load(),0);return()=>clearTimeout(timer);},[load]);
   async function action(payload:Record<string,unknown>){const response=await fetch("/api/team",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const result=await response.json();if(!response.ok){setError(result.error);return false;}await load();return true;}

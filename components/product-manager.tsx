@@ -3,6 +3,7 @@
 import { AlertTriangle, Edit3, ImageIcon, PackagePlus, Plus, Search, Trash2, X } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ImageUpload } from "@/components/image-upload";
+import { useBackDismiss } from "@/components/use-back-dismiss";
 
 type Category = { id: string; name: string; active: boolean; sortOrder: number };
 type Product = { id: string; name: string; description: string; priceCop: number; packagingFeeCop: number; icon: string; imageUrl: string; active: boolean; categoryId: string | null; categoryName: string | null; stockQuantity: number | null };
@@ -18,6 +19,7 @@ export function ProductManager() {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Product | null | undefined>(undefined);
   const [categoryEditor,setCategoryEditor]=useState(false);
+  useBackDismiss(categoryEditor, () => setCategoryEditor(false));
 
   const load = useCallback(async () => {
     const response = await fetch("/api/catalog");
@@ -86,6 +88,7 @@ function ProductEditor({ product, categories, onClose, onSave }: { product: Prod
   const [icon, setIcon] = useState(product?.icon ?? "🍽️");
   const [trackStock, setTrackStock] = useState(product?.stockQuantity !== null && product?.stockQuantity !== undefined);
   const [stockQuantity, setStockQuantity] = useState<number>(product?.stockQuantity ?? 10);
+  useBackDismiss(true, onClose);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true);

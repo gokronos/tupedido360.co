@@ -3,6 +3,7 @@
 import { Eye, ImagePlus, Save, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ImageUpload } from "@/components/image-upload";
+import { useBackDismiss } from "@/components/use-back-dismiss";
 
 type Template = "classic" | "catalog" | "impact";
 type Banner = { id?: string; eyebrow: string; title: string; description: string; imageUrl: string; active: boolean; sortOrder: number };
@@ -19,6 +20,7 @@ export function DesignManager({ slug }:{slug:string}) {
   const [editing,setEditing]=useState<Banner|null>(null);
   const [saving,setSaving]=useState(false);
   const [message,setMessage]=useState("");
+  useBackDismiss(Boolean(editing), () => setEditing(null));
   const load=useCallback(async()=>{const response=await fetch("/api/design",{cache:"no-store"});const result=await response.json();if(response.ok){setTemplate(result.menuTemplate);setBanners(result.banners)}else setMessage(result.error)},[]);
   useEffect(()=>{const timer=setTimeout(()=>void load(),0);return()=>clearTimeout(timer)},[load]);
   async function action(payload:Record<string,unknown>,success:string){setSaving(true);setMessage("");const response=await fetch("/api/design",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const result=await response.json();setMessage(response.ok?success:result.error);if(response.ok)await load();setSaving(false);return response.ok}
