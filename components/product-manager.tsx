@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Edit3, ImageIcon, PackagePlus, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, Archive, Copy, Edit3, ImageIcon, PackagePlus, Plus, Search, X } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ImageUpload } from "@/components/image-upload";
 import { useBackDismiss } from "@/components/use-back-dismiss";
@@ -79,8 +79,11 @@ export function ProductManager() {
       </div>
       <b>{money(product.priceCop)}</b>
       <label className="status-toggle" title={product.active ? "Producto disponible" : "Producto oculto"}><input type="checkbox" checked={product.active} onChange={() => action({ action: "toggleProduct", id: product.id })} /><span /></label>
-      <button className="row-icon" onClick={() => setEditing(product)} title="Editar producto" aria-label={`Editar ${product.name}`}><Edit3 size={18} /></button>
-      <button className="row-icon danger-icon" onClick={() => { if (window.confirm(`¿Eliminar ${product.name}?`)) void action({ action: "deleteProduct", id: product.id }); }} title="Eliminar producto" aria-label={`Eliminar ${product.name}`}><Trash2 size={18} /></button>
+      <div className="product-actions">
+        <button className="row-icon" onClick={() => setEditing(product)} title="Editar producto" aria-label={`Editar ${product.name}`}><Edit3 size={18} /><span>Editar</span></button>
+        <button className="row-icon duplicate-icon" onClick={() => setEditing({ ...product, id: "", name: `${product.name} - otro sabor` })} title="Duplicar producto" aria-label={`Duplicar ${product.name}`}><Copy size={18} /><span>Duplicar</span></button>
+        <button className="row-icon danger-icon" onClick={() => { if (window.confirm(`¿Archivar ${product.name}? Dejará de aparecer en los menús, pero conservará su historial.`)) void action({ action: "deleteProduct", id: product.id }); }} title="Archivar producto" aria-label={`Archivar ${product.name}`}><Archive size={18} /><span>Archivar</span></button>
+      </div>
     </article>)}</div>}
     {editing !== undefined && <ProductEditor product={editing} categories={catalog.categories} onClose={() => setEditing(undefined)} onSave={async (values) => { if (await action({ action: "saveProduct", ...values })) setEditing(undefined); }} />}
     {categoryEditor&&<div className="editor-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setCategoryEditor(false)}}><form className="small-editor" onSubmit={async event=>{event.preventDefault();const name=String(new FormData(event.currentTarget).get("name")??"");if(await action({action:"createCategory",name}))setCategoryEditor(false)}}><header><div><h2>Nueva categoría</h2><p>Agrupa productos para encontrarlos rápidamente.</p></div><button type="button" onClick={()=>setCategoryEditor(false)}><X size={19}/></button></header><label><span>Nombre</span><input name="name" required minLength={2} maxLength={50} autoFocus placeholder="Ej. Gaseosas y Bebidas"/></label><footer><button className="secondary-action" type="button" onClick={()=>setCategoryEditor(false)}>Cancelar</button><button className="primary-compact">Crear categoría</button></footer></form></div>}
@@ -113,7 +116,7 @@ function ProductEditor({ product, categories, onClose, onSave }: { product: Prod
     setSaving(false);
   }
   return <div className="editor-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><form className="product-editor" onSubmit={submit}>
-    <header><div><h2>{product ? "Editar producto" : "Nuevo producto"}</h2><p>Información visible para clientes y empleados.</p></div><button type="button" onClick={onClose} title="Cerrar" aria-label="Cerrar"><X size={20} /></button></header>
+    <header><div><h2>{product?.id ? "Editar producto" : product ? "Duplicar producto" : "Nuevo producto"}</h2><p>{product && !product.id ? "Cambie el nombre o sabor y guarde la nueva copia." : "Información visible para clientes y empleados."}</p></div><button type="button" onClick={onClose} title="Cerrar" aria-label="Cerrar"><X size={20} /></button></header>
     <label><span>Nombre</span><input name="name" defaultValue={product?.name} required minLength={2} maxLength={100} placeholder="Ej. Gaseosa Coca-Cola 350ml" /></label>
     <div className="field-row"><label><span>Categoría</span><select name="categoryId" defaultValue={product?.categoryId ?? ""}><option value="">Sin categoría</option>{categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}</select></label><label><span>Precio</span><input name="priceCop" type="number" min="0" step="100" defaultValue={product?.priceCop} required placeholder="5000" /></label></div>
     <label><span>Precio del recipiente</span><input name="packagingFeeCop" type="number" min="0" step="100" defaultValue={product?.packagingFeeCop ?? 0} required /><small>Se cobra por unidad solo en pedidos para llevar o domicilio. Usa 0 si no aplica.</small></label>

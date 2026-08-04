@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { KeyboardAware } from "@/components/keyboard-aware";
 
 export const metadata: Metadata = {
   title: "TuPedido360 | Crea tu negocio",
@@ -18,7 +19,7 @@ export default function RootLayout({
     <html
       lang="es"
     >
-      <body>{children}</body>
+      <body><KeyboardAware />{children}</body>
     </html>
   );
 }

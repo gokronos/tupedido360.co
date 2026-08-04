@@ -17,7 +17,7 @@ export async function GET() {
   const categories = await sql`
     SELECT id, name, active, sort_order AS "sortOrder"
     FROM categories WHERE business_id = ${businessId}
-    ORDER BY sort_order, name`;
+    ORDER BY CASE WHEN lower(name) ~ '(bebida|gaseosa|jugo|cerveza|licor|cafe|café|coctel)' THEN 1 ELSE 0 END, sort_order, name`;
   const products = await sql`
     SELECT p.id, p.name, p.description, p.price_cop AS "priceCop", p.packaging_fee_cop AS "packagingFeeCop",
            p.icon, p.image_url AS "imageUrl", p.stock_quantity AS "stockQuantity",
@@ -25,7 +25,8 @@ export async function GET() {
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id AND c.business_id = ${businessId}
     WHERE p.business_id = ${businessId}
-    ORDER BY p.created_at DESC`;
+    ORDER BY CASE WHEN lower(COALESCE(c.name,'')) ~ '(bebida|gaseosa|jugo|cerveza|licor|cafe|café|coctel)' THEN 1 ELSE 0 END,
+             c.sort_order, p.created_at DESC`;
   return NextResponse.json({ categories, products });
 }
 
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
 
     if (body.action === "deleteProduct") {
       const id = typeof body.id === "string" ? body.id : "";
-      const [product] = await sql`DELETE FROM products WHERE id=${id} AND business_id=${businessId} RETURNING id`;
+      const [product] = await sql`UPDATE products SET active=false,updated_at=now() WHERE id=${id} AND business_id=${businessId} RETURNING id`;
       if (!product) return NextResponse.json({ error: "Producto no encontrado." }, { status: 404 });
       return NextResponse.json({ ok: true });
     }
