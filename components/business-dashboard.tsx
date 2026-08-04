@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  BadgeDollarSign,
   Bell,
   Boxes,
   ChefHat,
@@ -32,6 +33,7 @@ import { PushNotificationRegistrar } from "@/components/push-notification-regist
 const navigation = [
   { id: "summary", label: "Resumen", icon: LayoutDashboard },
   { id: "new-order", label: "Nuevo pedido", icon: ShoppingCart },
+  { id: "cash", label: "Caja", icon: BadgeDollarSign },
   { id: "orders", label: "Pedidos", icon: ClipboardList },
   { id: "sales", label: "Historial y ventas", icon: BarChart3 },
   { id: "products", label: "Productos", icon: Boxes },
@@ -60,6 +62,7 @@ export function BusinessDashboard({
       "summary",
       "orders",
       "new-order",
+      "cash",
       "sales",
       "products",
       "tables",
@@ -73,6 +76,7 @@ export function BusinessDashboard({
       "summary",
       "orders",
       "new-order",
+      "cash",
       "sales",
       "products",
       "tables",
@@ -81,7 +85,7 @@ export function BusinessDashboard({
       "design",
       "settings",
     ],
-    cashier: ["summary", "orders", "new-order", "sales", "settings"],
+    cashier: ["summary", "cash", "orders", "new-order", "sales", "settings"],
     kitchen: ["kitchen", "settings"],
   };
   const visibleNavigation = navigation.filter(
@@ -172,7 +176,9 @@ export function BusinessDashboard({
                 : section === "orders"
                   ? "Pedidos"
                   : section === "new-order"
-                    ? "Nuevo pedido"
+                  ? "Nuevo pedido"
+                  : section === "cash"
+                    ? "Caja · Venta rápida"
                     : section === "sales"
                       ? "Historial y ventas"
                       : section === "tables"
@@ -216,6 +222,9 @@ export function BusinessDashboard({
             initialTableId={orderTableId}
           />
         )}
+        {section === "cash" && (
+          <WaiterDashboard session={session} embedded cashMode />
+        )}
         {section === "kitchen" && <OrdersManager role={session.role} />}
         {section === "sales" && <SalesHistory />}
         {section === "products" && <ProductManager />}
@@ -230,6 +239,7 @@ export function BusinessDashboard({
           "summary",
           "orders",
           "new-order",
+          "cash",
           "sales",
           "products",
           "tables",

@@ -40,6 +40,7 @@ export function WaiterDashboard({
   lockedTableName,
   orderId,
   modal = false,
+  cashMode = false,
   onOrderSaved,
 }: {
   session: AppSession;
@@ -48,6 +49,7 @@ export function WaiterDashboard({
   lockedTableName?: string;
   orderId?: string;
   modal?: boolean;
+  cashMode?: boolean;
   onOrderSaved?: () => void;
 }) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -60,6 +62,9 @@ export function WaiterDashboard({
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [confirmation, setConfirmation] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "transfer">(
+    "cash",
+  );
   const load = useCallback(async () => {
     const [catalogResponse, tablesResponse] = await Promise.all([
       fetch("/api/catalog"),
@@ -122,32 +127,45 @@ export function WaiterDashboard({
       return next;
     });
   }
-  async function submit() {
-    if (!tableId || !items.length) {
-      setError("Selecciona una mesa y agrega productos.");
+  async function submit(fulfillment?: "delivered" | "preparation") {
+    if ((!cashMode && !tableId) || !items.length) {
+      setError(
+        cashMode
+          ? "Agregue al menos un producto."
+          : "Selecciona una mesa y agrega productos.",
+      );
       return;
     }
     setSending(true);
     setError("");
     try {
-      const response = await fetch("/api/waiter/orders", {
+      const response = await fetch(
+        cashMode ? "/api/cash/orders" : "/api/waiter/orders",
+        {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           tableId,
           orderId,
+          paymentMethod,
+          fulfillment,
           notes,
           items: items.map((item) => ({
             productId: item.id,
             quantity: item.quantity,
           })),
         }),
-      });
+      },
+      );
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(result.error ?? "No se pudo guardar la adición.");
       } else {
-        setConfirmation(result.reference);
+        setConfirmation(
+          cashMode
+            ? `Venta ${result.reference} registrada correctamente.`
+            : result.reference,
+        );
         setCart({});
         setNotes("");
         onOrderSaved?.();
@@ -160,7 +178,7 @@ export function WaiterDashboard({
   }
   return (
     <main
-      className={`waiter-shell${embedded ? " waiter-embedded" : ""}${modal ? " waiter-modal" : ""}`}
+      className={`waiter-shell${embedded ? " waiter-embedded" : ""}${modal ? " waiter-modal" : ""}${cashMode ? " cash-mode" : ""}`}
     >
       {!embedded && (
         <header>
@@ -182,7 +200,7 @@ export function WaiterDashboard({
       )}
       <section className="waiter-main">
         <div className="waiter-top">
-          {!orderId && (
+          {!orderId && !cashMode && (
             <label>
               <span>Mesa del pedido</span>
               <select
@@ -235,7 +253,9 @@ export function WaiterDashboard({
         {confirmation && (
           <div className="waiter-confirmation">
             <CheckCircle2 size={20} />
-            Pedido {confirmation} enviado a cocina.
+            {cashMode
+              ? confirmation
+              : `Pedido ${confirmation} enviado a cocina.`}
             <button onClick={() => setConfirmation("")}>Cerrar</button>
           </div>
         )}
@@ -298,9 +318,11 @@ export function WaiterDashboard({
         <div>
           <Store size={19} />
           <strong>
-            {lockedTableName ??
+            {cashMode
+              ? "Venta rápida"
+              : lockedTableName ??
               tables.find((table) => table.id === tableId)?.name ??
-              "Sin mesa"}
+                "Sin mesa"}
           </strong>
           <span>
             {items.reduce((sum, item) => sum + item.quantity, 0)} productos
@@ -327,22 +349,55 @@ export function WaiterDashboard({
             rows={3}
           />
         </label>
+        {cashMode && (
+          <label>
+            <span>Forma de pago</span>
+            <select
+              value={paymentMethod}
+              onChange={(event) =>
+                setPaymentMethod(event.target.value as "cash" | "transfer")
+              }
+            >
+              <option value="cash">Efectivo</option>
+              <option value="transfer">Transferencia</option>
+            </select>
+          </label>
+        )}
         <footer>
           <div>
             <span>Total</span>
             <strong>{money(total)}</strong>
           </div>
-          <button
-            disabled={sending || !tableId || !items.length}
-            onClick={submit}
-          >
-            <Send size={18} />
-            {sending
-              ? "Guardando..."
-              : orderId
-                ? "Guardar adición"
-                : "Enviar pedido"}
-          </button>
+          {cashMode ? (
+            <div className="cash-sale-actions">
+              <button
+                disabled={sending || !items.length}
+                onClick={() => submit("delivered")}
+              >
+                <CheckCircle2 size={18} />
+                {sending ? "Guardando..." : "Cobrar y entregar"}
+              </button>
+              <button
+                disabled={sending || !items.length}
+                onClick={() => submit("preparation")}
+              >
+                <Send size={18} />
+                {sending ? "Guardando..." : "Enviar a preparación"}
+              </button>
+            </div>
+          ) : (
+            <button
+              disabled={sending || !tableId || !items.length}
+              onClick={() => submit()}
+            >
+              <Send size={18} />
+              {sending
+                ? "Guardando..."
+                : orderId
+                  ? "Guardar adición"
+                  : "Enviar pedido"}
+            </button>
+          )}
         </footer>
       </aside>
     </main>
