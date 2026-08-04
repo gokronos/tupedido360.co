@@ -334,7 +334,18 @@ export async function ensureSchema(options?: { migrate?: boolean }) {
         auth TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       )`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS native_push_tokens (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        platform TEXT NOT NULL CHECK (platform IN ('android','ios')),
+        token TEXT NOT NULL UNIQUE,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`;
     await sql`CREATE INDEX IF NOT EXISTS push_subscriptions_business_idx ON push_subscriptions(business_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS native_push_tokens_business_idx ON native_push_tokens(business_id)`;
     await sql`CREATE INDEX IF NOT EXISTS business_members_user_idx ON business_members(user_id)`;
     await sql`CREATE INDEX IF NOT EXISTS subscriptions_status_idx ON subscriptions(status)`;
     await sql`CREATE INDEX IF NOT EXISTS categories_business_idx ON categories(business_id, sort_order)`;

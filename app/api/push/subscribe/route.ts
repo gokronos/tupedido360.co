@@ -21,7 +21,24 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null) as {
       endpoint?: unknown;
       keys?: { p256dh?: unknown; auth?: unknown };
+      nativeToken?: unknown;
+      platform?: unknown;
     } | null;
+    if (
+      typeof body?.nativeToken === "string" &&
+      body.nativeToken.length >= 20 &&
+      body.nativeToken.length <= 4096 &&
+      (body.platform === "android" || body.platform === "ios")
+    ) {
+      const sql = await ensureSchema();
+      await sql`
+        INSERT INTO native_push_tokens (business_id,user_id,platform,token)
+        VALUES (${session.businessId},${session.userId},${body.platform},${body.nativeToken})
+        ON CONFLICT (token) DO UPDATE SET
+          business_id=EXCLUDED.business_id,user_id=EXCLUDED.user_id,
+          platform=EXCLUDED.platform,updated_at=now()`;
+      return NextResponse.json({ ok: true, channel: "native" });
+    }
     const { endpoint, keys } = body || {};
 
     if (typeof endpoint !== "string" || endpoint.length > 2048 ||

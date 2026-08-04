@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Bell, BellOff, Volume2 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
 
 export function PushNotificationRegistrar({
   enabled = true,
@@ -13,8 +15,17 @@ export function PushNotificationRegistrar({
   >("default");
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const native = Capacitor.isNativePlatform();
+  const nativePushAvailable = Capacitor.isPluginAvailable("PushNotifications");
 
   useEffect(() => {
+    if (native && !nativePushAvailable) return;
+    if (native) {
+      void PushNotifications.checkPermissions().then((result) => {
+        setPermission(result.receive === "granted" ? "granted" : "default");
+      });
+      return;
+    }
     if (
       !enabled ||
       typeof window === "undefined" ||
@@ -35,13 +46,74 @@ export function PushNotificationRegistrar({
         }
       })
       .catch((err) => console.error("[SW Register Error]", err));
-  }, [enabled]);
+  }, [enabled, native, nativePushAvailable]);
+
+  useEffect(() => {
+    if (!native || !nativePushAvailable) return;
+    let active = true;
+    let remove: (() => Promise<void>) | undefined;
+    void PushNotifications.addListener(
+      "pushNotificationActionPerformed",
+      () => {
+        window.location.href = "/aplicacion?section=orders";
+      },
+    ).then((handle) => {
+      if (!active) void handle.remove();
+      else remove = () => handle.remove();
+    });
+    return () => {
+      active = false;
+      if (remove) void remove();
+    };
+  }, [native, nativePushAvailable]);
 
   async function enableNotifications() {
     if (permission === "unsupported") return;
     setLoading(true);
 
     try {
+      if (native) {
+        let status = await PushNotifications.checkPermissions();
+        if (status.receive === "prompt")
+          status = await PushNotifications.requestPermissions();
+        if (status.receive !== "granted") {
+          setPermission("denied");
+          alert("Permite las notificaciones de TuPedido360 en los ajustes del celular.");
+          return;
+        }
+        await PushNotifications.createChannel({
+          id: "orders",
+          name: "Nuevos pedidos",
+          description: "Avisos de pedidos recibidos en TuPedido360",
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+        });
+        const registration = await PushNotifications.addListener(
+          "registration",
+          async ({ value: nativeToken }) => {
+            const response = await fetch("/api/push/subscribe", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ nativeToken, platform: Capacitor.getPlatform() }),
+            });
+            if (!response.ok) throw new Error("No se pudo guardar el dispositivo");
+            setPermission("granted");
+            setSubscribed(true);
+            await registration.remove();
+          },
+        );
+        const registrationError = await PushNotifications.addListener(
+          "registrationError",
+          async (notificationError) => {
+            console.error("[Native Push Registration Error]", notificationError);
+            await registration.remove();
+            await registrationError.remove();
+          },
+        );
+        await PushNotifications.register();
+        return;
+      }
       const res = await Notification.requestPermission();
       setPermission(res);
 
@@ -89,7 +161,12 @@ export function PushNotificationRegistrar({
     }
   }
 
-  if (!enabled || permission === "unsupported") return null;
+  if (
+    !enabled ||
+    permission === "unsupported" ||
+    (native && !nativePushAvailable)
+  )
+    return null;
 
   return (
     <div

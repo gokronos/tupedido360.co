@@ -56,6 +56,12 @@ export function BusinessDashboard({
     session.role === "kitchen" ? "kitchen" : "summary",
   );
   const [orderTableId, setOrderTableId] = useState("");
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("section") !== "orders")
+      return;
+    const timer = window.setTimeout(() => setSection("orders"), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   if (session.role === "waiter") return <WaiterDashboard session={session} />;
   const allowed: Record<string, string[]> = {
     owner: [
@@ -301,7 +307,7 @@ function Summary({
   const metrics = data?.metrics;
   return (
     <>
-      <PushNotificationRegistrar enabled={!playApp} />
+      <PushNotificationRegistrar />
       <div className="trial-banner">
         <div>
           <CreditCard size={21} />

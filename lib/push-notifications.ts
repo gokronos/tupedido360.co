@@ -1,5 +1,27 @@
 import webpush from "web-push";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getMessaging } from "firebase-admin/messaging";
 import { ensureSchema } from "@/db/client";
+
+function firebaseMessaging() {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim();
+  if (!raw) return null;
+  const credentials = JSON.parse(raw) as {
+    project_id: string;
+    client_email: string;
+    private_key: string;
+  };
+  const app =
+    getApps()[0] ??
+    initializeApp({
+      credential: cert({
+        projectId: credentials.project_id,
+        clientEmail: credentials.client_email,
+        privateKey: credentials.private_key.replace(/\\n/g, "\n"),
+      }),
+    });
+  return getMessaging(app);
+}
 
 function vapidKeys() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
@@ -29,16 +51,15 @@ export async function broadcastNewOrderNotification(businessId: string, orderDat
   tableNumber?: string | null;
 }) {
   try {
-    setupWebPush();
     const sql = await ensureSchema();
-
-    const subscriptions = await sql`
+    const [subscriptions, nativeTokens] = await Promise.all([
+      sql`
       SELECT endpoint, p256dh, auth
       FROM push_subscriptions
       WHERE business_id = ${businessId}
-    `;
-
-    if (!subscriptions.length) return;
+    `,
+      sql`SELECT token FROM native_push_tokens WHERE business_id=${businessId}`,
+    ]);
 
     const payload = JSON.stringify({
       title: `🔔 NUEVO PEDIDO #${orderData.orderNumber}`,
@@ -53,6 +74,7 @@ export async function broadcastNewOrderNotification(businessId: string, orderDat
       },
     });
 
+    if (subscriptions.length) setupWebPush();
     const sendPromises = subscriptions.map(async (sub) => {
       const pushSubscription = {
         endpoint: sub.endpoint,
@@ -74,8 +96,44 @@ export async function broadcastNewOrderNotification(businessId: string, orderDat
         }
       }
     });
-
-    await Promise.allSettled(sendPromises);
+    if (subscriptions.length) {
+      await Promise.allSettled(sendPromises);
+    }
+    const messaging = firebaseMessaging();
+    if (messaging && nativeTokens.length) {
+      const tokens = nativeTokens.map((row) => String(row.token));
+      for (let index = 0; index < tokens.length; index += 500) {
+        const batch = tokens.slice(index, index + 500);
+        const result = await messaging.sendEachForMulticast({
+          tokens: batch,
+          notification: {
+            title: `Nuevo pedido #${orderData.orderNumber}`,
+            body: `${orderData.customerName} · $${orderData.totalCop.toLocaleString("es-CO")}`,
+          },
+          data: { url: "/aplicacion", orderId: orderData.id },
+          android: {
+            priority: "high",
+            notification: {
+              channelId: "orders",
+              sound: "default",
+              color: "#176B4D",
+              tag: `order-${orderData.id}`,
+            },
+          },
+        });
+        const invalid = result.responses.flatMap((response, responseIndex) =>
+          !response.success &&
+          [
+            "messaging/registration-token-not-registered",
+            "messaging/invalid-registration-token",
+          ].includes(response.error?.code ?? "")
+            ? [batch[responseIndex]]
+            : [],
+        );
+        if (invalid.length)
+          await sql`DELETE FROM native_push_tokens WHERE token IN ${sql(invalid)}`;
+      }
+    }
   } catch (error) {
     console.error("[Broadcast Push Notification Error]", error);
   }

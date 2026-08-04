@@ -8,10 +8,16 @@ KEYSTORE="$SIGNING_DIR/tupedido360-upload.jks"
 CERTIFICATE="$SIGNING_DIR/tupedido360-upload-certificate.pem"
 ALIAS="tupedido360-upload"
 UNSIGNED_BUNDLE="$PROJECT_DIR/android/app/build/outputs/bundle/release/app-release.aab"
-SIGNED_BUNDLE="$PROJECT_DIR/TuPedido360-Play-v2.aab"
+SIGNED_BUNDLE="$PROJECT_DIR/TuPedido360-Play-v3.aab"
+GOOGLE_SERVICES="$PROJECT_DIR/android/app/google-services.json"
 
 if [[ ! -x "$JDK_DIR/bin/java" ]]; then
   echo "No se encontró Java 21 en $JDK_DIR."
+  exit 1
+fi
+
+if [[ ! -s "$GOOGLE_SERVICES" ]]; then
+  echo "Falta android/app/google-services.json. Descárguelo desde Firebase antes de crear la versión de Play Store."
   exit 1
 fi
 
