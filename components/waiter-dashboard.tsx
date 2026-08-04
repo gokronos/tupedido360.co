@@ -26,6 +26,7 @@ type Product = {
   stockQuantity: number | null;
 };
 type Table = { id: string; name: string; active: boolean };
+export type OrderParticipantOption = { id: string; label: string; position: number };
 type Cart = Record<string, number>;
 const money = (value: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -41,6 +42,7 @@ export function WaiterDashboard({
   orderId,
   modal = false,
   cashMode = false,
+  orderParticipants = [],
   onOrderSaved,
 }: {
   session: AppSession;
@@ -50,12 +52,21 @@ export function WaiterDashboard({
   orderId?: string;
   modal?: boolean;
   cashMode?: boolean;
+  orderParticipants?: OrderParticipantOption[];
   onOrderSaved?: () => void;
 }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [tableId, setTableId] = useState(initialTableId);
   const [cart, setCart] = useState<Cart>({});
+  const [splitMode, setSplitMode] = useState(orderParticipants.length > 0);
+  const [peopleCount, setPeopleCount] = useState(
+    Math.max(2, orderParticipants.length),
+  );
+  const [currentPerson, setCurrentPerson] = useState(0);
+  const [personCarts, setPersonCarts] = useState<Cart[]>(() =>
+    Array.from({ length: Math.max(2, orderParticipants.length) }, () => ({})),
+  );
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
@@ -107,16 +118,17 @@ export function WaiterDashboard({
       }),
     [products, search, categoryId],
   );
+  const activeCart = splitMode ? personCarts[currentPerson] ?? {} : cart;
   const items = products
-    .filter((product) => cart[product.id])
-    .map((product) => ({ ...product, quantity: cart[product.id] }));
+    .filter((product) => activeCart[product.id])
+    .map((product) => ({ ...product, quantity: activeCart[product.id] }));
   const total = items.reduce(
     (sum, item) => sum + item.priceCop * item.quantity,
     0,
   );
   function quantity(id: string, change: number) {
     const product = products.find((candidate) => candidate.id === id);
-    setCart((current) => {
+    const update = (current: Cart) => {
       const maximum = product?.stockQuantity ?? 50;
       const value = Math.min(
         maximum,
@@ -125,14 +137,27 @@ export function WaiterDashboard({
       const next = { ...current, [id]: value };
       if (!value) delete next[id];
       return next;
-    });
+    };
+    if (splitMode)
+      setPersonCarts((current) =>
+        current.map((personCart, index) =>
+          index === currentPerson ? update(personCart) : personCart,
+        ),
+      );
+    else setCart(update);
   }
   async function submit(fulfillment?: "delivered" | "preparation") {
-    if ((!cashMode && !tableId) || !items.length) {
+    const creatingSplitOrder = splitMode && !orderId && !cashMode;
+    const missingPerson = creatingSplitOrder
+      ? personCarts.findIndex((personCart) => Object.keys(personCart).length === 0)
+      : -1;
+    if ((!cashMode && !tableId) || !items.length || missingPerson >= 0) {
       setError(
         cashMode
           ? "Agregue al menos un producto."
-          : "Selecciona una mesa y agrega productos.",
+          : missingPerson >= 0
+            ? `Agregue al menos un producto a la Persona ${missingPerson + 1}.`
+            : "Selecciona una mesa y agrega productos.",
       );
       return;
     }
@@ -150,6 +175,13 @@ export function WaiterDashboard({
           paymentMethod,
           fulfillment,
           notes,
+          participantId: orderParticipants[currentPerson]?.id,
+          participants: creatingSplitOrder
+            ? personCarts.map((personCart, index) => ({
+                label: `Persona ${index + 1}`,
+                items: Object.entries(personCart).map(([productId, quantity]) => ({ productId, quantity })),
+              }))
+            : undefined,
           items: items.map((item) => ({
             productId: item.id,
             quantity: item.quantity,
@@ -167,6 +199,8 @@ export function WaiterDashboard({
             : result.reference,
         );
         setCart({});
+        setPersonCarts(Array.from({ length: peopleCount }, () => ({})));
+        setCurrentPerson(0);
         setNotes("");
         onOrderSaved?.();
       }
@@ -216,6 +250,26 @@ export function WaiterDashboard({
               </select>
             </label>
           )}
+          {!orderId && !cashMode && (
+            <div className="split-order-setup">
+              <span>Tipo de pedido</span>
+              <div>
+                <button className={!splitMode ? "active" : ""} onClick={() => setSplitMode(false)}>Normal</button>
+                <button className={splitMode ? "active" : ""} onClick={() => setSplitMode(true)}>Por personas</button>
+              </div>
+              {splitMode && (
+                <label>
+                  <span>¿Cuántas personas pagan?</span>
+                  <input type="number" min={2} max={20} value={peopleCount} onChange={(event) => {
+                    const count = Math.max(2, Math.min(20, Math.round(Number(event.target.value) || 2)));
+                    setPeopleCount(count);
+                    setPersonCarts((current) => Array.from({ length: count }, (_, index) => current[index] ?? {}));
+                    setCurrentPerson((current) => Math.min(current, count - 1));
+                  }} />
+                </label>
+              )}
+            </div>
+          )}
           <label className="waiter-search">
             <span>Buscar producto</span>
             <div>
@@ -228,6 +282,16 @@ export function WaiterDashboard({
             </div>
           </label>
         </div>
+        {splitMode && (
+          <div className="participant-strip" aria-label="Cuentas del pedido">
+            {(orderParticipants.length ? orderParticipants : Array.from({ length: peopleCount }, (_, index) => ({ id: String(index), label: `Persona ${index + 1}`, position: index + 1 }))).map((participant, index) => (
+              <button key={participant.id} className={currentPerson === index ? "active" : ""} onClick={() => setCurrentPerson(index)}>
+                {participant.label}
+                {!orderParticipants.length && Object.keys(personCarts[index] ?? {}).length > 0 && <small>Listo</small>}
+              </button>
+            ))}
+          </div>
+        )}
         {categories.length > 0 && (
           <div
             className="waiter-category-strip"
@@ -287,12 +351,12 @@ export function WaiterDashboard({
                     <em>Quedan {product.stockQuantity}</em>
                   )}
               </div>
-              {cart[product.id] ? (
+              {activeCart[product.id] ? (
                 <div className="quantity-control">
                   <button onClick={() => quantity(product.id, -1)}>
                     <Minus size={16} />
                   </button>
-                  <span>{cart[product.id]}</span>
+                  <span>{activeCart[product.id]}</span>
                   <button onClick={() => quantity(product.id, 1)}>
                     <Plus size={16} />
                   </button>
@@ -324,6 +388,7 @@ export function WaiterDashboard({
               tables.find((table) => table.id === tableId)?.name ??
                 "Sin mesa"}
           </strong>
+          {splitMode && <b className="participant-cart-label">{orderParticipants[currentPerson]?.label ?? `Persona ${currentPerson + 1}`}</b>}
           <span>
             {items.reduce((sum, item) => sum + item.quantity, 0)} productos
           </span>
@@ -386,17 +451,16 @@ export function WaiterDashboard({
               </button>
             </div>
           ) : (
-            <button
-              disabled={sending || !tableId || !items.length}
-              onClick={() => submit()}
-            >
-              <Send size={18} />
-              {sending
-                ? "Guardando..."
-                : orderId
-                  ? "Guardar adición"
-                  : "Enviar pedido"}
-            </button>
+            splitMode && !orderId && currentPerson < peopleCount - 1 ? (
+              <button disabled={!items.length} onClick={() => { setError(""); setCurrentPerson((current) => current + 1); }}>
+                Siguiente persona
+              </button>
+            ) : (
+              <button disabled={sending || !tableId || !items.length} onClick={() => submit()}>
+                <Send size={18} />
+                {sending ? "Guardando..." : orderId ? `Guardar adición${splitMode ? ` · ${orderParticipants[currentPerson]?.label ?? `Persona ${currentPerson + 1}`}` : ""}` : splitMode ? "Enviar pedido completo" : "Enviar pedido"}
+              </button>
+            )
           )}
         </footer>
       </aside>

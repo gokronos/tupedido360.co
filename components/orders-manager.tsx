@@ -40,6 +40,16 @@ type OrderItem = {
   subtotalCop: number;
   addedAt?: string;
   additionRound?: number;
+  participantId?: string;
+};
+type OrderParticipant = {
+  id: string;
+  label: string;
+  position: number;
+  paid: boolean;
+  paymentMethod: "cash" | "transfer" | null;
+  paidAt: string | null;
+  subtotalCop: number;
 };
 type OrderCorrection = {
   productName: string;
@@ -60,6 +70,7 @@ type Order = {
   notes: string;
   status: OrderStatus;
   paid: boolean;
+  splitMode: boolean;
   paymentMethod: "cash" | "transfer" | "pay_at_store";
   paymentStatus: "pending" | "pending_verification" | "verified";
   deliveryFeeCop: number | null;
@@ -75,6 +86,7 @@ type Order = {
   createdByName?: string;
   items: OrderItem[];
   corrections: OrderCorrection[];
+  participants: OrderParticipant[];
 };
 const money = (value: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -287,6 +299,7 @@ export function OrdersManager({
               initialTableId={editingOrder.tableId}
               lockedTableName={editingOrder.tableName ?? "Mesa"}
               orderId={editingOrder.id}
+              orderParticipants={editingOrder.participants}
               onOrderSaved={() => {
                 void load(true);
                 setEditingOrder(null);
@@ -421,9 +434,11 @@ function OrderCard({
             {order.addressReference ? ` · ${order.addressReference}` : ""}
           </address>
         )}
-        <small>
-          Pago: {paymentNames[order.paymentMethod] ?? order.paymentMethod}
-        </small>
+        {!order.splitMode && (
+          <small>
+            Pago: {paymentNames[order.paymentMethod] ?? order.paymentMethod}
+          </small>
+        )}
       </div>
       <div className="order-lines">
         {[...itemGroups.entries()].map(([round, items]) => (
@@ -448,6 +463,11 @@ function OrderCard({
                 <span>
                   <b>{item.quantity}x</b>
                   {item.productName}
+                  {item.participantId && (
+                    <small className="order-item-participant">
+                      {order.participants.find((participant) => participant.id === item.participantId)?.label}
+                    </small>
+                  )}
                 </span>
                 <strong>{money(item.subtotalCop)}</strong>
               </div>
@@ -539,7 +559,32 @@ function OrderCard({
           ))}
         </div>
       )}
-      <div
+      {order.splitMode && (
+        <div className="participant-payments">
+          <header>
+            <strong>Cuentas por persona</strong>
+            <span>{order.participants.filter((participant) => participant.paid).length} de {order.participants.length} pagadas</span>
+          </header>
+          {order.participants.map((participant) => (
+            <div className={participant.paid ? "is-paid" : ""} key={participant.id}>
+              <span>
+                <strong>{participant.label}</strong>
+                <small>{participant.paid ? `Pagó · ${participant.paymentMethod === "transfer" ? "Transferencia" : "Efectivo"}` : "Pendiente"}</small>
+              </span>
+              <b>{money(participant.subtotalCop)}</b>
+              {canManagePayment && (
+                <span className="participant-payment-actions">
+                  {!participant.paid && <select defaultValue="cash" id={`pay-${participant.id}`}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select>}
+                  <button disabled={busy} onClick={() => onAction({ action: "toggleParticipantPaid", id: order.id, participantId: participant.id, paymentMethod: participant.paid ? (participant.paymentMethod ?? "cash") : (document.getElementById(`pay-${participant.id}`) as HTMLSelectElement | null)?.value ?? "cash" })}>
+                    {participant.paid ? "Deshacer" : "Registrar pago"}
+                  </button>
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {!order.splitMode && <div
         className={`order-payment-box ${order.paid ? "is-paid" : "is-pending"}`}
       >
         <div>
@@ -565,7 +610,7 @@ function OrderCard({
                 : "Marcar como pagado"}
           </button>
         )}
-      </div>
+      </div>}
       <footer>
         {order.paymentMethod === "transfer" && canManagePayment && (
           <label>

@@ -53,6 +53,7 @@ export async function GET(request: Request) {
       o.neighborhood, o.address_reference AS "addressReference", o.payment_method AS "paymentMethod",
       o.payment_status AS "paymentStatus", o.delivery_fee_cop AS "deliveryFeeCop", o.delivery_quote_status AS "deliveryQuoteStatus",
       o.estimated_minutes AS "estimatedMinutes", o.status, o.paid, o.total_cop AS "totalCop",
+      o.split_mode AS "splitMode",
       o.packaging_total_cop AS "packagingTotalCop", o.created_at AS "createdAt", o.updated_at AS "updatedAt",
       o.table_id AS "tableId", t.name AS "tableName", u.name AS "createdByName"
     FROM orders o
@@ -65,12 +66,20 @@ export async function GET(request: Request) {
   const items = await auth.sql`
     SELECT id,order_id AS "orderId",product_name AS "productName",unit_price_cop AS "unitPriceCop",
       quantity-removed_quantity AS quantity,(quantity-removed_quantity)*unit_price_cop AS "subtotalCop",
-      added_at AS "addedAt",addition_round AS "additionRound"
+      added_at AS "addedAt",addition_round AS "additionRound",participant_id AS "participantId"
     FROM order_items WHERE order_id IN ${auth.sql(orderIds)} AND quantity>removed_quantity ORDER BY id`;
   const corrections = await auth.sql`
     SELECT order_id AS "orderId",product_name AS "productName",quantity,reason,
       corrected_by_name AS "correctedByName",created_at AS "createdAt"
     FROM order_item_corrections WHERE order_id IN ${auth.sql(orderIds)} ORDER BY created_at`;
+  const participants = await auth.sql`
+    SELECT op.id,op.order_id AS "orderId",op.position,op.label,op.paid,
+      op.payment_method AS "paymentMethod",op.paid_at AS "paidAt",
+      COALESCE(SUM((oi.quantity-oi.removed_quantity)*oi.unit_price_cop),0)::integer AS "subtotalCop"
+    FROM order_participants op
+    LEFT JOIN order_items oi ON oi.participant_id=op.id
+    WHERE op.order_id IN ${auth.sql(orderIds)}
+    GROUP BY op.id ORDER BY op.order_id,op.position`;
   const grouped = new Map<string, Array<Record<string, unknown>>>();
   for (const item of items) {
     const id = String(item.orderId);
@@ -84,11 +93,17 @@ export async function GET(request: Request) {
       correction,
     ]);
   }
+  const groupedParticipants = new Map<string, Array<Record<string, unknown>>>();
+  for (const participant of participants) {
+    const id = String(participant.orderId);
+    groupedParticipants.set(id, [...(groupedParticipants.get(id) ?? []), participant]);
+  }
   return NextResponse.json({
     orders: orders.map((order) => ({
       ...order,
       items: grouped.get(String(order.id)) ?? [],
       corrections: groupedCorrections.get(String(order.id)) ?? [],
+      participants: groupedParticipants.get(String(order.id)) ?? [],
     })),
   });
 }
@@ -109,6 +124,8 @@ export async function POST(request: Request) {
     reason?: string;
     itemId?: string;
     quantity?: number;
+    participantId?: string;
+    paymentMethod?: string;
   } | null;
   if (!body?.id)
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
@@ -174,6 +191,33 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     return NextResponse.json({ order });
+  }
+  if (body.action === "toggleParticipantPaid") {
+    if (!auth.role || !["owner", "admin", "cashier"].includes(auth.role))
+      return NextResponse.json(
+        { error: "No tienes permiso para registrar pagos." },
+        { status: 403 },
+      );
+    if (!body.participantId || !["cash", "transfer"].includes(body.paymentMethod ?? "cash"))
+      return NextResponse.json({ error: "Cuenta o forma de pago inválida." }, { status: 400 });
+    const participantId = body.participantId;
+    const orderId = body.id;
+    const paymentMethod = body.paymentMethod ?? "cash";
+    const changed = await auth.sql.begin(async (transaction) => {
+      const [participant] = await transaction`
+        SELECT op.id,op.paid FROM order_participants op JOIN orders o ON o.id=op.order_id
+        WHERE op.id=${participantId} AND op.order_id=${orderId} AND o.business_id=${auth.businessId}
+          AND o.deleted_at IS NULL FOR UPDATE OF op,o`;
+      if (!participant) return null;
+      const nextPaid = !Boolean(participant.paid);
+      await transaction`UPDATE order_participants SET paid=${nextPaid},payment_method=${nextPaid ? paymentMethod : null},paid_at=${nextPaid ? new Date() : null} WHERE id=${participantId}`;
+      const [summary] = await transaction`SELECT COUNT(*) FILTER (WHERE paid=false)::integer AS pending FROM order_participants WHERE order_id=${orderId}`;
+      const allPaid = Number(summary.pending) === 0;
+      await transaction`UPDATE orders SET paid=${allPaid},payment_status=${allPaid ? "verified" : "pending"},updated_at=now() WHERE id=${orderId}`;
+      return { id: participantId, paid: nextPaid, allPaid };
+    });
+    if (!changed) return NextResponse.json({ error: "Cuenta no encontrada." }, { status: 404 });
+    return NextResponse.json({ participant: changed });
   }
   if (body.action === "correctItem") {
     if (

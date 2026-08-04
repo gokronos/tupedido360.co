@@ -241,6 +241,7 @@ export async function ensureSchema(options?: { migrate?: boolean }) {
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`;
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL`;
     await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS deletion_reason TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS split_mode BOOLEAN NOT NULL DEFAULT false`;
     await sql`ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check`;
     await sql`
       DO $$ BEGIN
@@ -267,6 +268,19 @@ export async function ensureSchema(options?: { migrate?: boolean }) {
         END IF;
       END $$`;
     await sql`
+      CREATE TABLE IF NOT EXISTS order_participants (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL CHECK (position > 0),
+        label TEXT NOT NULL,
+        paid BOOLEAN NOT NULL DEFAULT false,
+        payment_method TEXT,
+        paid_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (order_id, position)
+      )`;
+    await sql`
       CREATE TABLE IF NOT EXISTS order_items (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -279,6 +293,7 @@ export async function ensureSchema(options?: { migrate?: boolean }) {
     await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS added_at TIMESTAMPTZ NOT NULL DEFAULT now()`;
     await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS addition_round INTEGER NOT NULL DEFAULT 0`;
     await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS removed_quantity INTEGER NOT NULL DEFAULT 0`;
+    await sql`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS participant_id UUID REFERENCES order_participants(id) ON DELETE SET NULL`;
     await sql`
       CREATE TABLE IF NOT EXISTS order_item_corrections (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -329,6 +344,8 @@ export async function ensureSchema(options?: { migrate?: boolean }) {
     await sql`CREATE INDEX IF NOT EXISTS customer_addresses_customer_idx ON customer_addresses(customer_id, last_used_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS orders_business_idx ON orders(business_id, created_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS order_items_participant_idx ON order_items(participant_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS order_participants_order_idx ON order_participants(order_id,position)`;
     await sql`CREATE INDEX IF NOT EXISTS order_deletion_log_business_idx ON order_deletion_log(business_id, deleted_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS restaurant_tables_business_idx ON restaurant_tables(business_id, active)`;
   })();

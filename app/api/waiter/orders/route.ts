@@ -31,13 +31,36 @@ export async function POST(request: Request) {
     orderId?: string;
     notes?: string;
     items?: Array<{ productId?: string; quantity?: number }>;
+    participantId?: string;
+    participants?: Array<{
+      label?: string;
+      items?: Array<{ productId?: string; quantity?: number }>;
+    }>;
   } | null;
   if (!body?.tableId)
     return NextResponse.json(
       { error: "Selecciona una mesa y agrega productos." },
       { status: 400 },
     );
-  const parsedItems = parseOrderItems(body.items);
+  const participantInputs = body.participants;
+  if (participantInputs && (participantInputs.length < 2 || participantInputs.length > 20))
+    return NextResponse.json(
+      { error: "El pedido por personas debe tener entre 2 y 20 cuentas." },
+      { status: 400 },
+    );
+  const parsedParticipants = participantInputs?.map((participant) => ({
+    label: participant.label?.trim().slice(0, 40) ?? "",
+    parsed: parseOrderItems(participant.items),
+  }));
+  if (parsedParticipants?.some((participant) => !participant.parsed.ok))
+    return NextResponse.json(
+      { error: "Cada persona debe tener al menos un producto válido." },
+      { status: 400 },
+    );
+  const normalizedItems = participantInputs
+    ? participantInputs.flatMap((participant) => participant.items ?? [])
+    : body.items;
+  const parsedItems = parseOrderItems(normalizedItems);
   if (!parsedItems.ok)
     return NextResponse.json(
       {
@@ -111,13 +134,14 @@ export async function POST(request: Request) {
         0,
       );
       let [order] = body.orderId
-        ? await transaction`SELECT id,reference FROM orders WHERE id=${body.orderId} AND business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL FOR UPDATE`
-        : await transaction`SELECT id,reference FROM orders WHERE business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`;
+        ? await transaction`SELECT id,reference,split_mode FROM orders WHERE id=${body.orderId} AND business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL FOR UPDATE`
+        : await transaction`SELECT id,reference,split_mode FROM orders WHERE business_id=${businessId} AND table_id=${table.id} AND order_type='dine_in' AND status NOT IN ('delivered','cancelled') AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`;
       if (body.orderId && !order) throw new OrderUnavailableError();
+      if (participantInputs && order) throw new OrderUnavailableError();
       const existing = Boolean(order);
       if (!order)
         [order] =
-          await transaction`INSERT INTO orders (business_id,reference,order_type,customer_name,customer_phone,notes,total_cop,table_id,created_by_user_id) VALUES (${businessId},${reference},'dine_in',${String(table.name)},'',${body.notes?.trim().slice(0, 500) ?? ""},${totalCop},${table.id},${userId}) RETURNING id,reference`;
+          await transaction`INSERT INTO orders (business_id,reference,order_type,customer_name,customer_phone,notes,total_cop,table_id,created_by_user_id,split_mode) VALUES (${businessId},${reference},'dine_in',${String(table.name)},'',${body.notes?.trim().slice(0, 500) ?? ""},${totalCop},${table.id},${userId},${Boolean(participantInputs)}) RETURNING id,reference`;
       else
         await transaction`UPDATE orders SET total_cop=total_cop+${totalCop},status=CASE WHEN status='ready' THEN 'preparing' ELSE status END,notes=CASE WHEN ${body.notes?.trim().slice(0, 500) ?? ""}::text='' THEN notes ELSE concat_ws(E'\n',NULLIF(notes,''),${body.notes?.trim().slice(0, 500) ?? ""}::text) END,updated_at=now() WHERE id=${order.id}`;
       const additionRound = existing
@@ -127,9 +151,29 @@ export async function POST(request: Request) {
             )[0].round,
           )
         : 0;
-      for (const product of lockedProducts) {
+      const additionParticipantId = body.participantId ?? null;
+      if (existing && Boolean(order.split_mode) && !additionParticipantId)
+        throw new OrderUnavailableError();
+      if (additionParticipantId) {
+        const [participant] = await transaction`SELECT id FROM order_participants WHERE id=${additionParticipantId} AND order_id=${order.id} AND business_id=${businessId}`;
+        if (!participant) throw new OrderUnavailableError();
+      }
+      if (parsedParticipants) {
+        for (let index = 0; index < parsedParticipants.length; index += 1) {
+          const participantInput = parsedParticipants[index];
+          const [participant] = await transaction`INSERT INTO order_participants (business_id,order_id,position,label) VALUES (${businessId},${order.id},${index + 1},${participantInput.label || `Persona ${index + 1}`}) RETURNING id`;
+          const participantQuantities = participantInput.parsed.ok
+            ? participantInput.parsed.quantities
+            : new Map<string, number>();
+          for (const product of lockedProducts) {
+            const quantity = participantQuantities.get(String(product.id)) ?? 0;
+            if (quantity > 0)
+              await transaction`INSERT INTO order_items (order_id,product_id,product_name,unit_price_cop,quantity,subtotal_cop,addition_round,added_at,participant_id) VALUES (${order.id},${product.id},${product.name},${product.price_cop},${quantity},${Number(product.price_cop) * quantity},0,now(),${participant.id})`;
+          }
+        }
+      } else for (const product of lockedProducts) {
         const quantity = quantities.get(String(product.id)) ?? 0;
-        await transaction`INSERT INTO order_items (order_id,product_id,product_name,unit_price_cop,quantity,subtotal_cop,addition_round,added_at) VALUES (${order.id},${product.id},${product.name},${product.price_cop},${quantity},${Number(product.price_cop) * quantity},${additionRound},now())`;
+        await transaction`INSERT INTO order_items (order_id,product_id,product_name,unit_price_cop,quantity,subtotal_cop,addition_round,added_at,participant_id) VALUES (${order.id},${product.id},${product.name},${product.price_cop},${quantity},${Number(product.price_cop) * quantity},${additionRound},now(),${additionParticipantId})`;
       }
       return { reference: String(order.reference), existing };
     });

@@ -134,6 +134,18 @@ a { color:inherit; }
 .waiter-shell > header form button { width:40px; height:40px; display:grid; place-items:center; border:1px solid rgba(255,255,255,.2); border-radius:6px; background:transparent; color:#fff; cursor:pointer; }
 .waiter-main { min-width:0; padding:20px; overflow:auto; }
 .waiter-top { display:grid; grid-template-columns:220px 1fr; gap:12px; margin-bottom:14px; }
+.split-order-setup { grid-column:1/-1; padding:12px; border:1px solid var(--line); border-radius:10px; background:#f7faf8; }
+.split-order-setup > span { display:block; margin-bottom:8px; font-size:12px; font-weight:900; }
+.split-order-setup > div { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.split-order-setup button { min-height:40px; border:1px solid var(--line); border-radius:8px; background:#fff; font-weight:800; }
+.split-order-setup button.active { border-color:var(--green); background:var(--green); color:#fff; }
+.split-order-setup label { margin-top:10px; display:grid; grid-template-columns:1fr 82px; align-items:center; gap:10px; }
+.split-order-setup input { height:42px; padding:0 10px; border:1px solid var(--line); border-radius:8px; font-size:18px; font-weight:900; text-align:center; }
+.participant-strip { display:flex; gap:7px; margin:0 0 13px; padding-bottom:3px; overflow-x:auto; }
+.participant-strip button { flex:0 0 auto; min-width:98px; min-height:42px; padding:6px 12px; border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); font-weight:850; }
+.participant-strip button.active { border-color:var(--green); background:#e9f8ef; color:var(--green-dark); }
+.participant-strip small { display:block; font-size:9px; color:var(--green); }
+.participant-cart-label { grid-column:2; color:var(--green); font-size:11px; }
 .waiter-top label { display:grid; gap:6px; }
 .waiter-top label > span,.waiter-cart label > span { font-size:12px; font-weight:800; }
 .waiter-top select,.waiter-search > div { height:46px; border:1px solid var(--line); border-radius:7px; background:#fff; }
@@ -673,6 +685,17 @@ html.keyboard-open .product-editor,html.keyboard-open .cart-drawer,html.keyboard
 .order-item-group > header { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#176b4d; font-size:11px; }
 .order-item-group > header time { color:var(--muted); font-weight:700; }
 .order-item-group > div { display:flex; justify-content:space-between; gap:12px; font-size:13px; }
+.order-item-participant { display:inline-block; margin-left:7px; padding:2px 6px; border-radius:10px; background:#e9f8ef; color:var(--green-dark); font-size:10px; }
+.participant-payments { margin:0 14px 12px; overflow:hidden; border:1px solid #b8dfc8; border-radius:9px; background:#f7fcf9; }
+.participant-payments > header { display:flex; justify-content:space-between; gap:10px; padding:11px 13px; background:#e7f6ed; }
+.participant-payments > header span { color:var(--muted); font-size:11px; }
+.participant-payments > div { display:grid; grid-template-columns:minmax(90px,1fr) auto; align-items:center; gap:8px; padding:11px 13px; border-top:1px solid #dcece2; }
+.participant-payments > div.is-paid { background:#eef9f2; }
+.participant-payments > div > span:first-child { display:grid; }
+.participant-payments small { color:var(--muted); }
+.participant-payment-actions { grid-column:1/-1; display:flex; gap:7px; }
+.participant-payment-actions select,.participant-payment-actions button { min-height:38px; padding:0 10px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+.participant-payment-actions button { flex:1; border-color:var(--green); background:var(--green); color:#fff; font-weight:850; }
 .order-editor-backdrop { z-index:100000; padding:12px; justify-content:center; }
 .order-editor-modal { width:min(1100px,100%); height:min(820px,calc(100vh - 24px)); display:flex; flex-direction:column; overflow:hidden; border-radius:14px; background:#f8fafc; box-shadow:0 24px 70px rgba(0,0,0,.3); }
 .order-editor-modal > header { min-height:64px; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); background:#fff; }
